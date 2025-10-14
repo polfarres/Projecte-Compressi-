@@ -5,14 +5,28 @@ public class Main {
     public static void main(String[] args) {
 
 
-        ChooseOperation option = new ChooseOperation();
-        option.readOption();
-
-
         String inputPath = "resources/imatges";
         String outputPath = "resources/imatges/sortides";
 
         ImageProcessor processor = new ImageProcessor(inputPath, outputPath);
-        processor.processAll();
+
+
+        ChooseOperation option = new ChooseOperation();
+        option.readOption();
+
+        switch (option) {
+            case 1:
+                processor.processAll();
+                break;
+            case 2:
+                break;
+            case 3:
+                break;
+            default:
+                System.out.print("Amore, t'has equivocat ");
+                break;
+        }
+
+
     }
 }
