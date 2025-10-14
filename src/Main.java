@@ -14,11 +14,12 @@ public class Main {
         ChooseOperation option = new ChooseOperation();
         option.readOption();
 
-        switch (option) {
+        switch (option.getOption()) {
             case 1:
-                processor.processAll();
+                processor.processReadAndWrite();
                 break;
             case 2:
+                processor.processEntropy();
                 break;
             case 3:
                 break;
