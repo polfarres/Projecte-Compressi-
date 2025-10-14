@@ -11,10 +11,12 @@ public class ChooseOperation {
 
         Scanner input = new Scanner(System.in);
 
-        System.out.print("Introdueix una opció (1-4): ");
-        System.out.print("1.- Llegir Imatge ");
-        System.out.print("2.- Calcular entropia (ordre 0)");
-        System.out.print("3.- Calculsr entropia condicionada (ordre 1)");
+        System.out.println("Introdueix una opció (1-4):");
+        System.out.println("1.- Llegir Imatge");
+        System.out.println("2.- Calcular entropia (ordre 0)");
+        System.out.println("3.- Calcular entropia condicionada (ordre 1)");
+
+        System.out.print("Opció: ");
         int opcio = input.nextInt();
 
         this.option = opcio;
