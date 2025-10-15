@@ -19,9 +19,10 @@ public class Main {
                 processor.processReadAndWrite();
                 break;
             case 2:
-                processor.processEntropy();
+                processor.processEntropy("ORDER_0");
                 break;
             case 3:
+                processor.processEntropy("ORDER_1");
                 break;
             default:
                 System.out.print("Amore, t'has equivocat ");

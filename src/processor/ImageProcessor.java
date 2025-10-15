@@ -5,6 +5,7 @@ import io.RawImageReader;
 import io.RawImageWriter;
 import processor.entropy.EntropyCalculator;
 import processor.entropy.EntropyOrder0;
+import processor.entropy.EntropyOrder1;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -41,6 +42,8 @@ public class ImageProcessor {
                 String outputNameRaw = "sortida_" + file.getName();
                 RawImageWriter.writeRaw(new File(outputFolder, outputNameRaw).getAbsolutePath(), img, config);
 
+                System.out.print("Imatge"+ file.getName() +"processada");
+
             } catch (Exception e) {
                 System.err.println("Error processant: " + file.getName());
                 e.printStackTrace();
@@ -48,7 +51,7 @@ public class ImageProcessor {
         }
     }
 
-    public void processEntropy() {
+    public void processEntropy(String order) {
         File[] files = inputFolder.listFiles((dir, name) -> name.toLowerCase().endsWith(".raw"));
 
         if (files == null) {
@@ -61,7 +64,14 @@ public class ImageProcessor {
                 RawImageConfig config = parseConfigFromFilename(file.getName());
                 short[][][] img = RawImageReader.readRaw(file.getAbsolutePath(), config);
 
-                EntropyCalculator entropyCalc = new EntropyOrder0(); //EntropyOrder1()
+                EntropyCalculator entropyCalc;
+
+                if (order == "ORDER_0") {
+                    entropyCalc = new EntropyOrder0();
+                } else {
+                    entropyCalc = new EntropyOrder1();
+                }
+
                 double imageEntropy = entropyCalc.calculate(img);
 
                 System.out.println("Entropia total de " + file.getName() + ": " + imageEntropy + " bits");
