@@ -16,9 +16,7 @@ public class ChooseOperation {
         System.out.print("2.- Calcular entropia Total de les imatges (ordre 0)");
         System.out.print("3.- Calculsr entropia condicionada pixel esquerra (ordre 1)");
         System.out.print("3.- Calculsr entropia condicionada pixel dreta (ordre 1)");
-        int opcio = input.nextInt();
-
-        this.option = opcio;
+        this.option = input.nextInt();
 
         input.close();
     }

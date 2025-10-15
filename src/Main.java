@@ -1,7 +1,7 @@
 import io.ChooseOperation;
 
 public class Main {
-    public static void main(String[] args) {
+    static void main(String[] args) {
 
         ChooseOperation option = new ChooseOperation();
         option.readOption();
