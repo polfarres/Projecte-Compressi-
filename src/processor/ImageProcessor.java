@@ -3,18 +3,18 @@ package processor;
 import config.RawImageConfig;
 import io.RawImageReader;
 import io.RawImageWriter;
+import processor.entropy.EntropyCalculator;
+import processor.entropy.EntropyOrder0;
 
-import javax.imageio.ImageIO;
-import java.awt.image.BufferedImage;
 import java.io.File;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 
 public class ImageProcessor {
 
     private final File inputFolder;
     private final File outputFolder;
-    private double totalEntropy;
+    private final List<Double> totalEntropy;
 
     public ImageProcessor(String inputPath, String outputPath) {
         this.inputFolder = new File(inputPath);
@@ -22,16 +22,11 @@ public class ImageProcessor {
         if (!outputFolder.exists()) {
             outputFolder.mkdirs();
         }
-        this.totalEntropy = 0;
-
+        this.totalEntropy = new ArrayList<>();
     }
 
     public void processReadAndWrite() {
-
-        // .listFiles --> funció anònima que accepta tots els fitxers acabats en .raw (primer els passa a minus)
         File[] files = inputFolder.listFiles((dir, name) -> name.toLowerCase().endsWith(".raw"));
-
-
 
         if (files == null) {
             System.out.println("No s'han trobat fitxers RAW a " + inputFolder.getAbsolutePath());
@@ -41,12 +36,10 @@ public class ImageProcessor {
         for (File file : files) {
             try {
                 RawImageConfig config = parseConfigFromFilename(file.getName());
-
                 short[][][] img = RawImageReader.readRaw(file.getAbsolutePath(), config);
 
-                String outputNameRAw = "sortida" + file.getName();
-                RawImageWriter.writeRaw(new File(outputFolder, outputNameRAw).getAbsolutePath(), img, config);
-
+                String outputNameRaw = "sortida_" + file.getName();
+                RawImageWriter.writeRaw(new File(outputFolder, outputNameRaw).getAbsolutePath(), img, config);
 
             } catch (Exception e) {
                 System.err.println("Error processant: " + file.getName());
@@ -58,26 +51,28 @@ public class ImageProcessor {
     public void processEntropy() {
         File[] files = inputFolder.listFiles((dir, name) -> name.toLowerCase().endsWith(".raw"));
 
+        if (files == null) {
+            System.out.println("No s'han trobat fitxers RAW a " + inputFolder.getAbsolutePath());
+            return;
+        }
+
         for (File file : files) {
             try {
                 RawImageConfig config = parseConfigFromFilename(file.getName());
-
                 short[][][] img = RawImageReader.readRaw(file.getAbsolutePath(), config);
 
-                Map<Short, Double> probabilities = calculateProbability(img);
-
-                // TODO: FUNCIÓ QUE CALCULI L'ENTROPIA TOTAL
-                double imageEntropy = calculateImageEntropy(probabilities);
-                this.totalEntropy += imageEntropy;
+                EntropyCalculator entropyCalc = new EntropyOrder0(); //EntropyOrder1()
+                double imageEntropy = entropyCalc.calculate(img);
 
                 System.out.println("Entropia total de " + file.getName() + ": " + imageEntropy + " bits");
+                this.totalEntropy.add(imageEntropy);
 
             } catch (Exception e) {
                 System.err.println("Error processant: " + file.getName());
                 e.printStackTrace();
             }
         }
-        System.out.println("Entropia total de totes les imatges són: " + this.totalEntropy + " bits");
+
     }
 
     private RawImageConfig parseConfigFromFilename(String filename) {
@@ -90,44 +85,9 @@ public class ImageProcessor {
         int height = Integer.parseInt(parts[2]);
         int width = Integer.parseInt(parts[3]);
 
-        boolean signed = parts[0].contains("s");   // conté "s" -> signed
-        boolean bigEndian = parts[0].contains("be"); // conté "be" -> big endian
+        boolean signed = parts[0].contains("s");
+        boolean bigEndian = parts[0].contains("be");
 
         return new RawImageConfig(width, height, bands, bits, signed, bigEndian);
     }
-
-    private Map<Short, Double> calculateProbability(short[][][] img) {
-        Map<Short, Integer> countMap = new HashMap<>();
-        int total = 0;
-
-        // Comptar aparicions
-        for (int b = 0; b < img.length; b++) {
-            for (int y = 0; y < img[b].length; y++) {
-                for (int x = 0; x < img[b][y].length; x++) {
-                    short val = img[b][y][x];
-                    countMap.put(val, countMap.getOrDefault(val, 0) + 1);
-                    total++;
-                }
-            }
-        }
-
-        // Calcular probabilitats
-        Map<Short, Double> probMap = new HashMap<>();
-        for (Map.Entry<Short, Integer> entry : countMap.entrySet()) {
-            probMap.put(entry.getKey(), entry.getValue() / (double) total);
-        }
-
-        return probMap;
-    }
-
-    private double calculateImageEntropy(Map<Short,Double> probabilities) {
-        double entropy = 0;
-        for (double p : probabilities.values()) {
-            if (p > 0) {
-                entropy += -p * (Math.log(p) / Math.log(2));
-            }
-        }
-        return entropy;
-    }
-
 }
