@@ -11,32 +11,38 @@ public class ChooseOperation {
 
         Scanner input = new Scanner(System.in);
 
-        System.out.print("Introdueix una opció (1-4): ");
-        System.out.print("1.- Llegir Imatges ");
-        System.out.print("2.- Calcular entropia Total de les imatges (ordre 0)");
-        System.out.print("3.- Calculsr entropia condicionada pixel esquerra (ordre 1)");
-        System.out.print("3.- Calculsr entropia condicionada pixel dreta (ordre 1)");
+        System.out.println("Introdueix una opció (1-4): ");
+        System.out.println("1.- Llegir Imatges ");
+        System.out.println("2.- Calcular entropia Total de les imatges (ordre 0)");
+        System.out.println("3.- Entropía condicionada grau (correlació de pixels)");
+        System.out.println("4.- Calcular entropia condicionada (ordre 1)");
         this.option = input.nextInt();
 
         input.close();
     }
 
     public void ExecuteCommand(String inputPath, String outputPath){
-
+        ImageProcessor processor = new ImageProcessor(inputPath, outputPath);
 
         switch (this.option) {
             case 1:
-                ImageProcessor processor = new ImageProcessor(inputPath, outputPath);
+                System.out.println("Procesamiento io de las imagenes en raw.");
+                System.out.println("    -----------------------    ");
                 processor.processAll();
                 break;
             case 2:
-                System.out.print("Entropía total de les imatges: ");
+                System.out.println("Entropía total de les imatges: ");
+                System.out.println("    -----------------------    ");
+                processor.calculateImageEntropy();
                 break;
             case 3:
-                System.out.print("Entropía condicionada (pixel esquerra) ");
+                System.out.println("Entropía condicionada grau (correlació de pixels) ");
+                System.out.println("    -----------------------    ");
+                processor.calculateConditionalEntropy();
                 break;
             case 4:
-                System.out.print("Entropía condicionada (pixel dreta) ");
+                System.out.println("Entropía condicionada (correlació de pixels?) ");
+                System.out.println("    -----------------------    ");
                 break;
             default:
                 System.out.print("Amore, t'has equivocat ");
