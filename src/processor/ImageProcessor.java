@@ -84,50 +84,33 @@ public class ImageProcessor {
     public void calculateImageEntropy() {
         uploadImages();
 
-        int channel = 0; // 0 = gris o rojo, 1 = verde, 2 = azul
-
         for (Map.Entry<String, short[][][]> entry : Images.entrySet()) {
             String imageName = entry.getKey();
             short[][][] img = entry.getValue();
 
-            if (img == null) {
-                System.out.println("Imagen " + imageName + " es nula, se omite.");
-                continue;
-            }
-
-            // 1️⃣ Calcular distribución de probabilidad p(x) del canal seleccionado
-            Map<Integer, Double> p = CalculateProbability.pixelProbability(img, channel);
-
-            // 2️⃣ Calcular entropía total H(X)
+            Map<Short, Double> p = CalculateProbability.pixelProbability(img);
             double H = CalculateEntropy.entropy(p);
-
-            // 3️⃣ Mostrar resultado
             System.out.printf("Imagen: %s -> Entropía total H(X): %.4f bits%n", imageName, H);
+
         }
     }
-
 
 
     public void calculateConditionalEntropy() {
         // Asegúrate de que 'Images' esté cargado (por ejemplo, con uploadImages())
         uploadImages();
 
-        int channel = 0; // 0 = gris o rojo, 1 = verde, 2 = azul
 
         for (Map.Entry<String, short[][][]> entry : Images.entrySet()) {
             String imageName = entry.getKey();
             short[][][] img = entry.getValue();
 
-            if (img == null) {
-                System.out.println("Imagen " + imageName + " es nula, se omite.");
-                continue;
-            }
 
             // 1. Calcular distribución conjunta P(l, r)
-            Map<String, Double> pJoint = CalculateProbability.jointProbability(img, channel);
+            Map<String, Double> pJoint = CalculateProbability.jointProbability(img);
 
             // 2. Calcular marginal P(l)
-            Map<Integer, Double> pLeft = CalculateProbability.marginalLeft(pJoint);
+            Map<Short, Double> pLeft = CalculateProbability.marginalLeft(pJoint);
 
             // 3. Calcular entropía condicional H(R|L)
             double Hcond = CalculateEntropy.conditionalEntropy(pJoint, pLeft);
