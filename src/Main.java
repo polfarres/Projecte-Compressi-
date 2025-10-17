@@ -7,7 +7,7 @@ public class Main {
         option.readOption();
 
 
-        String inputPath = "resources/imatges";
+        String inputPath = "resources/imatges/entrades";
         String outputPath = "resources/imatges/sortides";
 
         option.ExecuteCommand(inputPath, outputPath);
