@@ -12,6 +12,9 @@ import static processor.Utils.parseConfigFromFilename;
 public class QuantitzationProcess {
     public static void quanticiseRoundingAll(Map<String, short[][][]> Images, int q, String outputPath) {
 
+        // Crear carpeta de salida si no existe
+        File folder = new File(outputPath);
+        if (!folder.exists()) folder.mkdirs();
 
         String outputFolder = outputPath;
         for (Map.Entry<String, short[][][]> entry : Images.entrySet()) {
@@ -31,10 +34,6 @@ public class QuantitzationProcess {
                             // Aplicar cuantización por redondeo
                             int quantized = (int) Math.round((double) val / q) * q;
 
-                            // Limitar el valor al rango del tipo short (-32768 a 32767)
-                            if (quantized > Short.MAX_VALUE) quantized = Short.MAX_VALUE;
-                            if (quantized < Short.MIN_VALUE) quantized = Short.MIN_VALUE;
-
                             img[b][x][y] = (short) quantized;
                         }
                     }
@@ -52,8 +51,8 @@ public class QuantitzationProcess {
         }
     }
 
-    public static void deQuanticiseRoundingAll(int q, String inputPath, String outputPath) {
-        String outputFolder = outputPath + "/Round_deQ_" + q + "_";
+    public static void deQuanticiseRoundingAll(String inputPath, String outputPath) {
+        String outputFolder = outputPath + "Q";
         File inputFolder = new File(inputPath);
 
         File[] files = inputFolder.listFiles((dir, name) -> name.toLowerCase().endsWith(".raw"));
@@ -69,6 +68,19 @@ public class QuantitzationProcess {
 
         for (File file : files) {
             try {
+                // === Leer Q desde el nombre del archivo ===
+                // Ejemplo: Q_100_filename.raw  → Q = 100
+                String[] parts = file.getName().split("_");
+                int q = 1; // valor por defecto si no se puede leer
+                if (parts.length > 1 && parts[0].equalsIgnoreCase("Q")) {
+                    try {
+                        q = Integer.parseInt(parts[1]);
+                    } catch (NumberFormatException ignored) {
+                        System.err.println("No s'ha pogut llegir Q del fitxer: " + file.getName());
+                    }
+                }
+                // ==========================================
+
                 RawImageConfig config = parseConfigFromFilename(file.getName());
                 short[][][] img = RawImageReader.readRaw(file.getAbsolutePath(), config);
 
@@ -77,15 +89,9 @@ public class QuantitzationProcess {
                     for (int x = 0; x < img[b].length; x++) { // width
                         for (int y = 0; y < img[b][x].length; y++) { // height
                             short val = img[b][x][y];
-                            // En caso de usar índices, multiplicar por q
-                            // En este caso los valores ya están cuantizados, así que:
-                            int dequantized = val;
 
-                            // Si hubieras almacenado índices: dequantized = val * q;
-
-                            // Asegurarse del rango short
-                            if (dequantized > Short.MAX_VALUE) dequantized = Short.MAX_VALUE;
-                            if (dequantized < Short.MIN_VALUE) dequantized = Short.MIN_VALUE;
+                            // Si los valores eran índices, multiplicar por q
+                            int dequantized = val * q;
 
                             img[b][x][y] = (short) dequantized;
                         }
@@ -93,8 +99,8 @@ public class QuantitzationProcess {
                 }
                 // -----
 
-                String outputNameRAw = "deQ_" + q + "_" + file.getName();
-                System.out.println("Image " + file.getName() + " processed.");
+                String outputNameRAw = "de" + file.getName();
+                System.out.println("Image " + file.getName() + " processed. (Q=" + q + ")");
                 RawImageWriter.writeRaw(new File(outputFolder, outputNameRAw).getAbsolutePath(), img, config);
 
             } catch (Exception e) {
@@ -103,6 +109,7 @@ public class QuantitzationProcess {
             }
         }
     }
+
 
 
     public static void quanticiseDeadZoneAll(Map<String, short[][][]> Images, int q) {

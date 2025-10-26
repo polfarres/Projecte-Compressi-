@@ -7,9 +7,14 @@ Projecte de compressió d'imatges.
 	- [x] Entropía de grau 0
 	- [x] Entropíes de grau 1
 - [x] Quantització
-- [ ] Desquantització
+- [X] Desquantització
 - [x] Entropía de la quantització
-- [ ] Entropía de la imatge desquantitzada (amb perdua)
+- [X] Entropía de la imatge desquantitzada (amb perdua)
+
+--- -- 
+### Abans de quantitzar
+
+- [ ] Predictive algorithm
 
  
 > **Note**: Falten Entropíes

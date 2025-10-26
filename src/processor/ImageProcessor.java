@@ -120,13 +120,15 @@ public class ImageProcessor {
     public void imageQuantitzation(int q, String outputPath) {
         uploadImages();
 
+        outputPath = outputPath+ "Q";
         QuantitzationProcess.quanticiseRoundingAll(this.Images,q, outputPath);
 
     }
 
-    public void deQuantitzation(int q, String inputPath, String outputPath) {
+    public void deQuantitzation(String inputPath, String outputPath) {
 
-        QuantitzationProcess.deQuanticiseRoundingAll(q, inputPath, outputPath);
+        inputPath = inputPath + "Q";
+        QuantitzationProcess.deQuanticiseRoundingAll(inputPath, outputPath);
 
     }
 

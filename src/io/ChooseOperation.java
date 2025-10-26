@@ -59,10 +59,7 @@ public class ChooseOperation {
             case 6:
                 System.out.println("DeQuantització de imatges");
                 System.out.println("    -----------------------    ");
-                System.out.print("    Quin es el valor de Q per el qual vols DeQuantitzar?:  ");
-                Q = new Scanner(System.in);
-                String InputPath = inputPath + "";
-                processor.deQuantitzation(Q.nextInt(), InputPath ,outputPath);
+                processor.deQuantitzation(inputPath ,outputPath);
                 break;
             default:
                 System.out.print("Amore, t'has equivocat ");
