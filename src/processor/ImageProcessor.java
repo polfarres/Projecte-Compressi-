@@ -8,7 +8,7 @@ import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
 
-import static processor.Utils.parseConfigFromFilename;
+import static processor.Utils.*;
 
 public class ImageProcessor {
 
@@ -118,6 +118,20 @@ public class ImageProcessor {
     }
 
     public void imageQuantitzation(int q, String outputPath) {
+
+        File outputDir = new File(outputPath);
+
+        // 2. Comprovar si el directori existeix. Si no existeix, intentar crear-lo.
+        if (!outputDir.exists()) {
+            // Utilitzem mkdirs() per crear la carpeta i tots els seus pares si cal.
+            boolean created = outputDir.mkdirs();
+
+            if (created) {
+                System.out.println("Directori creat amb èxit.");
+            }
+        }
+
+
         uploadImages();
 
         QuantitzationProcess.quanticiseRoundingAll(this.Images,q, outputPath);
@@ -126,8 +140,133 @@ public class ImageProcessor {
 
     public void deQuantitzation(int q, String inputPath, String outputPath) {
 
+        File[] files = inputFolder.listFiles((dir, name) ->
+                name.toLowerCase().startsWith("q") && name.toLowerCase().endsWith(".raw")
+        );
+
+
+        if (files == null) {
+            System.out.println("No s'han trobat fitxers de Qauntització RAW a " + inputFolder.getAbsolutePath());
+            return;
+        }
+
+        File outputDir = new File(outputPath);
+
+        // 2. Comprovar si el directori existeix. Si no existeix, intentar crear-lo.
+        if (!outputDir.exists()) {
+            // Utilitzem mkdirs() per crear la carpeta i tots els seus pares si cal.
+            boolean created = outputDir.mkdirs();
+
+            if (created) {
+                System.out.println("Directori creat amb èxit.");
+            }
+        }
+
         QuantitzationProcess.deQuanticiseRoundingAll(q, inputPath, outputPath);
 
     }
+    public void prediction(String inputPath, String outputPath) {
+
+        File inputDir = new File(inputPath);
+        File outputDir = new File(outputPath);
+
+        // Assegurar la creació de la carpeta de sortida (obligatori ara que escrivim)
+        if (!outputDir.exists()) {
+            outputDir.mkdirs();
+        }
+
+        File[] files = inputDir.listFiles((dir, name) ->
+                name.toLowerCase().startsWith("q") && name.toLowerCase().endsWith(".raw")
+        );
+
+        if (files == null || files.length == 0) {
+            System.out.println("⚠️ ATENCIÓ: No s'han trobat fitxers quantitzats (Q*.raw) a la carpeta: " + inputPath);
+            return;
+        }
+
+        PredictorDPCM predictor = new PredictorDPCM();
+
+        for (File file : files) {
+            String fileName = file.getName();
+
+            try {
+                RawImageConfig config = parseConfigFromFilename(fileName);
+                short[][][] imgDades = RawImageReader.readRaw(file.getAbsolutePath(), config);
+
+                // 1. Aplicar la predicció: el resultat és la matriu de RESIDUS (int[][][])
+                short[][][] residuDades = predictor.aplicarPrediccio(imgDades);
+
+                // 2. Generar el nom del fitxer de sortida (.txt)
+                String baseName = fileName.replace(".raw", "").replace(".RAW", "");
+                String txtOutputName = "PREDICCIÓ_" + baseName + ".txt";
+
+                // 3. Obtenir la ruta completa del fitxer de sortida
+                String fullOutputPath = new File(outputDir, txtOutputName).getAbsolutePath();
+
+                // 4. GUARDAR la matriu de residus al fitxer de text
+                printMatrixToFile(residuDades, fullOutputPath, "Residus DPCM per a la imatge: " + fileName);
+
+            } catch (Exception e) {
+                System.err.println("Error processant predicció per a: " + fileName);
+                e.printStackTrace();
+            }
+        }
+        System.out.println("\n✅ Procés de Predicció DPCM finalitzat.");
+    }
+
+    public void deprediction(String inputPath, String outputPath) {
+
+        File inputDir = new File(inputPath);
+        File outputDir = new File(outputPath);
+
+        // Assegurar la creació de la carpeta de sortida (obligatori ara que escrivim)
+        if (!outputDir.exists()) {
+            outputDir.mkdirs();
+        }
+
+        File[] files = inputDir.listFiles((dir, name) ->
+                name.toLowerCase().startsWith("q") && name.toLowerCase().endsWith(".raw")
+        );
+
+        if (files == null || files.length == 0) {
+            System.out.println("⚠️ ATENCIÓ: No s'han trobat fitxers quantitzats (Q*.raw) a la carpeta: " + inputPath);
+            return;
+        }
+
+        PredictorDPCM predictor = new PredictorDPCM();
+
+        for (File file : files) {
+            String fileName = file.getName();
+
+            try {
+                RawImageConfig config = parseConfigFromFilename(fileName);
+                short[][][] imgDades = RawImageReader.readRaw(file.getAbsolutePath(), config);
+
+                // 1. Aplicar la predicció: el resultat és la matriu de RESIDUS (int[][][])
+                short[][][] residuDades = predictor.aplicarPrediccio(imgDades);
+
+                // 2. Generar el nom del fitxer de sortida (.txt)
+                String baseName = fileName.replace(".raw", "").replace(".RAW", "");
+                String txtOutputName = "PREDICCIÓ_" + baseName + ".txt";
+
+                // 3. Obtenir la ruta completa del fitxer de sortida
+                String fullOutputPath = new File(outputDir, txtOutputName).getAbsolutePath();
+
+                //TODO: FER DESPREDICCIO DE CADA IMATGE O GURADAR-LA EN UN RAW
+                short[][][] desprediccio = predictor.reconstruirDades(residuDades);
+
+                RawImageWriter.writeRaw(new File(outputFolder, outputPath).getAbsolutePath(), desprediccio, config);
+
+
+
+            } catch (Exception e) {
+                System.err.println("Error processant predicció per a: " + fileName);
+                e.printStackTrace();
+            }
+        }
+        System.out.println("\n✅ Procés de Predicció DPCM finalitzat.");
+    }
+
+
 
 }

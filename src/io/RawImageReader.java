@@ -8,6 +8,12 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import config.RawImageConfig;
+
+import java.io.BufferedInputStream;
+import java.io.DataInputStream;
+import java.io.FileInputStream;
+import java.io.IOException;
 
 public class RawImageReader {
 
@@ -49,5 +55,40 @@ public class RawImageReader {
 
 
         return matrix;
+    }
+
+    public static int[][][] readRawInt(String filePath, RawImageConfig config) throws IOException {
+
+        int numBandes = config.bands;
+        int alçada = config.height;
+        int amplada = config.width;
+
+        // Inicialitzem la matriu de residus (que són int)
+        int[][][] data = new int[numBandes][alçada][amplada];
+
+        // Utilitzem DataInputStream per llegir enters (4 bytes)
+        try (DataInputStream dis = new DataInputStream(
+                new BufferedInputStream(
+                        new FileInputStream(filePath)))) {
+
+            // Recorrem la matriu per carregar les dades en el mateix ordre que es van escriure
+            for (int b = 0; b < numBandes; b++) {
+                for (int y = 0; y < alçada; y++) {
+                    for (int x = 0; x < amplada; x++) {
+
+                        // Llegeix un enter (4 bytes) del flux i l'assigna.
+                        // El mètode readInt() ja gestiona l'ordre de bytes.
+                        data[b][y][x] = dis.readInt();
+                    }
+                }
+            }
+
+        } // El 'try-with-resources' tanca automàticament el DataInputStream
+
+        // Opcional: Comprovació de fi de fitxer
+        // Si el fitxer encara conté dades aquí, indicaria un error de format.
+        // Amb readInt(), si no hi ha prou bytes, es llança una EOFException.
+
+        return data;
     }
 }

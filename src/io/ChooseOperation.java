@@ -19,6 +19,8 @@ public class ChooseOperation {
         System.out.println("4.- Calcular entropia condicionada 4 pixels propers (ordre 1)");
         System.out.println("5.- Quantització d'imatges");
         System.out.println("6.- DeQuantització d'imatges");
+        System.out.println("7.- Predicció d'imatges (un cop aplicada qauntització previament)");
+        System.out.println("8.- Despredicció (Reconstrucció) d'imatges");
         this.option = input.nextInt();
 
 
@@ -54,6 +56,7 @@ public class ChooseOperation {
                 System.out.println("    -----------------------    ");
                 System.out.print("    Quin es el valor de Q per el qual vols quantitzar?:  ");
                 Q = new Scanner(System.in);
+                outputPath += "/quantitzades";
                 processor.imageQuantitzation(Q.nextInt(), outputPath);
                 break;
             case 6:
@@ -61,8 +64,25 @@ public class ChooseOperation {
                 System.out.println("    -----------------------    ");
                 System.out.print("    Quin es el valor de Q per el qual vols DeQuantitzar?:  ");
                 Q = new Scanner(System.in);
-                String InputPath = inputPath + "";
+                String InputPath = outputPath + "/quantitzades";
+                outputPath += "/desquantització";
                 processor.deQuantitzation(Q.nextInt(), InputPath ,outputPath);
+                break;
+
+            case 7:
+                System.out.println("PREDICCIÓ D'IMATGES ");
+                System.out.println("    -----------------------    ");
+                inputPath = outputPath + "/quantitzades";
+                outputPath += "/prediction";
+                processor.prediction(inputPath, outputPath);
+            case 8: // NOVA FUNCIÓ DE DESPREDICCIÓ
+                System.out.println("DESPREDICCIÓ (RECONSTRUCCIÓ) D'IMATGES");
+                System.out.println("    -----------------------    ");
+                // La entrada són els residus generats per l'opció 7
+                String InputPathPrediccions = outputPath + "/quantitzades";
+                // La sortida són les dades reconstruïdes
+                outputPath += "/reconstruccio";
+                processor.deprediction(InputPathPrediccions, outputPath);
                 break;
             default:
                 System.out.print("Amore, t'has equivocat ");
