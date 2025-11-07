@@ -69,16 +69,15 @@ public class Utils {
 
     public static String stripPrefixes(String fileName) {
         // Definir els prefixos que el teu projecte afegeix
-        String[] prefixes = {"r_", "p_", "q_3_", "sortida"};
-        String result = fileName.toLowerCase();
+        String[] prefixes = {"r_", "p_", "Q_3_", "sortida"};
 
         for (String prefix : prefixes) {
-            if (result.startsWith(prefix)) {
+            if (fileName.startsWith(prefix)) {
                 // Eliminar el prefix i qualsevol guió o subratllat immediat
-                result = result.substring(prefix.length());
+                fileName = fileName.substring(prefix.length());
                 // Si el nom era R_Q_IMG.raw, ara pot començar per Q_IMG.raw, ho tornem a provar al bucle.
             }
         }
-        return result;
+        return fileName;
     }
 }

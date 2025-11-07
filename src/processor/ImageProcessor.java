@@ -8,6 +8,7 @@ import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
 
+import static processor.DistorsionMetrics.calculatePeakAbsoluteError;
 import static processor.Utils.*;
 
 public class ImageProcessor {
@@ -30,7 +31,7 @@ public class ImageProcessor {
     public void processAll() {
 
         // .listFiles --> funció anònima que accepta tots els fitxers acabats en .raw (primer els passa a minus)
-        File[] files = inputFolder.listFiles((dir, name) -> name.endsWith(".raw"));
+        File[] files = inputFolder.listFiles((dir, name) -> name.toLowerCase().endsWith(".raw"));
 
         if (files == null) {
             System.out.println("No s'han trobat fitxers RAW a " + inputFolder.getAbsolutePath());
@@ -56,7 +57,7 @@ public class ImageProcessor {
     }
 
     public void uploadImages(){
-        File[] files = inputFolder.listFiles((dir, name) -> name.endsWith(".raw"));
+        File[] files = inputFolder.listFiles((dir, name) -> name.toLowerCase().endsWith(".raw"));
 
 
 
@@ -141,7 +142,7 @@ public class ImageProcessor {
     public void deQuantitzation(int q, String inputPath, String outputPath) {
 
         File[] files = inputFolder.listFiles((dir, name) ->
-                name.toLowerCase().startsWith("q") && name.endsWith(".raw")
+                name.toLowerCase().startsWith("q") && name.toLowerCase().endsWith(".raw")
         );
 
 
@@ -176,7 +177,7 @@ public class ImageProcessor {
         }
 
         File[] files = inputDir.listFiles((dir, name) ->
-                name.toLowerCase().startsWith("q") && name.endsWith(".raw")
+                name.toLowerCase().startsWith("q") && name.toLowerCase().endsWith(".raw")
         );
 
         if (files == null || files.length == 0) {
@@ -225,7 +226,7 @@ public class ImageProcessor {
         }
 
         File[] files = inputDir.listFiles((dir, name) ->
-                name.toLowerCase().startsWith("q") && name.endsWith(".raw")
+                name.toLowerCase().startsWith("q") && name.toLowerCase().endsWith(".raw")
         );
 
         if (files == null || files.length == 0) {
@@ -255,9 +256,8 @@ public class ImageProcessor {
 
                 short[][][] desprediccio = predictor.reconstruirDades(residuDades);
 
-                RawImageWriter.writeRaw(new File(outputFolder, outputPath).getAbsolutePath(), desprediccio, config);
-
-
+                double mse= calculatePeakAbsoluteError(imgDades,desprediccio);
+                System.out.print(mse);
 
             } catch (Exception e) {
                 System.err.println("Error processant predicció per a: " + fileName);
@@ -289,7 +289,7 @@ public class ImageProcessor {
         }
 
         // 2. Llistar els fitxers quantitzats (.raw)
-        File[] reconstructedFiles = reconstructedDir.listFiles((dir, name) -> name.endsWith(".raw"));
+        File[] reconstructedFiles = reconstructedDir.listFiles((dir, name) -> name.toLowerCase().endsWith(".raw"));
 
         if (reconstructedFiles == null || reconstructedFiles.length == 0) {
             System.err.println("❌ ERROR: No s'han trobat fitxers RAW a la carpeta de quantitzades: " + reconstructedPath);
@@ -315,7 +315,7 @@ public class ImageProcessor {
                 if (originalImg != null) {
                     // Càlcul de mètriques
                     double mse = DistorsionMetrics.calculateMSE(originalImg, reconstructedImg);
-                    int pae = DistorsionMetrics.calculatePeakAbsoluteError(originalImg, reconstructedImg);
+                    int pae = calculatePeakAbsoluteError(originalImg, reconstructedImg);
 
                     System.out.printf("  [Fitxer Quantitzat: %s] -> MSE: %.4f | PAE: %d%n", compressedFileName, mse, pae);
                 } else {

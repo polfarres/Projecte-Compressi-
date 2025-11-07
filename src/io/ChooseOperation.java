@@ -82,7 +82,7 @@ public class ChooseOperation {
                 System.out.println("DESPREDICCIÓ (RECONSTRUCCIÓ) D'IMATGES");
                 System.out.println("    -----------------------    ");
                 // L'entrada és la carpeta amb els residus P_Q*.raw (Prediction)
-                String InputPathResidus = outputPath + "/prediction";
+                String InputPathResidus = outputPath + "/quantitzades";
                 // La sortida és la imatge reconstruïda R_P_Q*.raw
                 String OutputPathReconstruccio = outputPath + "/reconstruccio";
                 processor.deprediction(InputPathResidus, OutputPathReconstruccio);
