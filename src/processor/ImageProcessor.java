@@ -30,7 +30,7 @@ public class ImageProcessor {
     public void processAll() {
 
         // .listFiles --> funció anònima que accepta tots els fitxers acabats en .raw (primer els passa a minus)
-        File[] files = inputFolder.listFiles((dir, name) -> name.toLowerCase().endsWith(".raw"));
+        File[] files = inputFolder.listFiles((dir, name) -> name.endsWith(".raw"));
 
         if (files == null) {
             System.out.println("No s'han trobat fitxers RAW a " + inputFolder.getAbsolutePath());
@@ -56,7 +56,7 @@ public class ImageProcessor {
     }
 
     public void uploadImages(){
-        File[] files = inputFolder.listFiles((dir, name) -> name.toLowerCase().endsWith(".raw"));
+        File[] files = inputFolder.listFiles((dir, name) -> name.endsWith(".raw"));
 
 
 
@@ -141,7 +141,7 @@ public class ImageProcessor {
     public void deQuantitzation(int q, String inputPath, String outputPath) {
 
         File[] files = inputFolder.listFiles((dir, name) ->
-                name.toLowerCase().startsWith("q") && name.toLowerCase().endsWith(".raw")
+                name.toLowerCase().startsWith("q") && name.endsWith(".raw")
         );
 
 
@@ -176,7 +176,7 @@ public class ImageProcessor {
         }
 
         File[] files = inputDir.listFiles((dir, name) ->
-                name.toLowerCase().startsWith("q") && name.toLowerCase().endsWith(".raw")
+                name.toLowerCase().startsWith("q") && name.endsWith(".raw")
         );
 
         if (files == null || files.length == 0) {
@@ -225,7 +225,7 @@ public class ImageProcessor {
         }
 
         File[] files = inputDir.listFiles((dir, name) ->
-                name.toLowerCase().startsWith("q") && name.toLowerCase().endsWith(".raw")
+                name.toLowerCase().startsWith("q") && name.endsWith(".raw")
         );
 
         if (files == null || files.length == 0) {
@@ -252,7 +252,7 @@ public class ImageProcessor {
                 // 3. Obtenir la ruta completa del fitxer de sortida
                 String fullOutputPath = new File(outputDir, txtOutputName).getAbsolutePath();
 
-                //TODO: FER DESPREDICCIO DE CADA IMATGE O GURADAR-LA EN UN RAW
+
                 short[][][] desprediccio = predictor.reconstruirDades(residuDades);
 
                 RawImageWriter.writeRaw(new File(outputFolder, outputPath).getAbsolutePath(), desprediccio, config);
@@ -265,6 +265,68 @@ public class ImageProcessor {
             }
         }
         System.out.println("\n✅ Procés de Predicció DPCM finalitzat.");
+    }
+
+
+    public void calculateDistortionMetrics(String originalPath, String reconstructedPath) {
+
+        File originalDir = new File(originalPath);
+        File reconstructedDir = new File(reconstructedPath);
+
+        if (!reconstructedDir.exists() || !reconstructedDir.isDirectory()) {
+            System.err.println("❌ ERROR: La carpeta d'imatges quantitzades no existeix: " + reconstructedPath);
+            System.out.println("Primer, executa l'opció 5 (Quantització d'imatges).");
+            return;
+        }
+
+        // 1. Carregar imatges originals (utilitzem el mètode propi per carregar-les a this.Images)
+        // La crida a uploadImages() utilitza this.inputFolder (que s'ha inicialitzat amb l'originalPath)
+        uploadImages();
+
+        if (this.Images.isEmpty()) {
+            System.err.println("❌ ERROR: No s'han pogut carregar les imatges originals de " + originalPath);
+            return;
+        }
+
+        // 2. Llistar els fitxers quantitzats (.raw)
+        File[] reconstructedFiles = reconstructedDir.listFiles((dir, name) -> name.endsWith(".raw"));
+
+        if (reconstructedFiles == null || reconstructedFiles.length == 0) {
+            System.err.println("❌ ERROR: No s'han trobat fitxers RAW a la carpeta de quantitzades: " + reconstructedPath);
+            return;
+        }
+
+        System.out.println("Comparant " + this.Images.size() + " imatges originals amb les QUANTITZADES:");
+
+        for (File reconstructedFile : reconstructedFiles) {
+            String compressedFileName = reconstructedFile.getName();
+
+            try {
+                // Generar el nom original per fer el 'match'.
+                String originalFileName = stripPrefixes(compressedFileName);
+
+                // Càrrega de la imatge quantitzada (short[][][])
+                RawImageConfig config = parseConfigFromFilename(compressedFileName);
+                short[][][] reconstructedImg = RawImageReader.readRaw(reconstructedFile.getAbsolutePath(), config);
+
+                // Obtenció de la imatge original carregada prèviament
+                short[][][] originalImg = this.Images.get(originalFileName);
+
+                if (originalImg != null) {
+                    // Càlcul de mètriques
+                    double mse = DistorsionMetrics.calculateMSE(originalImg, reconstructedImg);
+                    int pae = DistorsionMetrics.calculatePeakAbsoluteError(originalImg, reconstructedImg);
+
+                    System.out.printf("  [Fitxer Quantitzat: %s] -> MSE: %.4f | PAE: %d%n", compressedFileName, mse, pae);
+                } else {
+                    System.err.println("  ⚠️ No s'ha trobat la imatge original corresponent per a: " + originalFileName);
+                }
+
+            } catch (Exception e) {
+                System.err.println("Error processant mètriques per a: " + compressedFileName);
+                e.printStackTrace();
+            }
+        }
     }
 
 

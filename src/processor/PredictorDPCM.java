@@ -77,10 +77,10 @@ public class PredictorDPCM {
                     }
 
                     // Càlcul de la RECONSTRUCCIÓ: Resultat és int
-                    int valorReconstruït = valorResidu + predictor;
+                    int valorReconstruIt = valorResidu + predictor;
 
                     // Emmagatzemem el resultat, CASTEJANT-lo a short
-                    dadesReconstruides[b][y][x] = (short) valorReconstruït;
+                    dadesReconstruides[b][y][x] = (short) valorReconstruIt;
                 }
             }
         }

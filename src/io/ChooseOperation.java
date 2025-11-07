@@ -21,6 +21,7 @@ public class ChooseOperation {
         System.out.println("6.- DeQuantització d'imatges");
         System.out.println("7.- Predicció d'imatges (un cop aplicada qauntització previament)");
         System.out.println("8.- Despredicció (Reconstrucció) d'imatges");
+        System.out.println("9.- Calcular Mètriques de Distorsió (MSE i PAE)"); // Unificada
         this.option = input.nextInt();
 
 
@@ -72,20 +73,28 @@ public class ChooseOperation {
             case 7:
                 System.out.println("PREDICCIÓ D'IMATGES ");
                 System.out.println("    -----------------------    ");
-                inputPath = outputPath + "/quantitzades";
-                outputPath += "/prediction";
-                processor.prediction(inputPath, outputPath);
-            case 8: // NOVA FUNCIÓ DE DESPREDICCIÓ
+                String InputPathQuantitzades = outputPath + "/quantitzades"; // Entrada Q*.raw
+                String OutputPathPrediction = outputPath + "/prediction";     // Sortida P_Q*.raw
+                processor.prediction(InputPathQuantitzades, OutputPathPrediction);
+                break;
+
+            case 8:
                 System.out.println("DESPREDICCIÓ (RECONSTRUCCIÓ) D'IMATGES");
                 System.out.println("    -----------------------    ");
-                // La entrada són els residus generats per l'opció 7
-                String InputPathPrediccions = outputPath + "/quantitzades";
-                // La sortida són les dades reconstruïdes
-                outputPath += "/reconstruccio";
-                processor.deprediction(InputPathPrediccions, outputPath);
+                // L'entrada és la carpeta amb els residus P_Q*.raw (Prediction)
+                String InputPathResidus = outputPath + "/prediction";
+                // La sortida és la imatge reconstruïda R_P_Q*.raw
+                String OutputPathReconstruccio = outputPath + "/reconstruccio";
+                processor.deprediction(InputPathResidus, OutputPathReconstruccio);
                 break;
-            default:
-                System.out.print("Amore, t'has equivocat ");
+
+            case 9:
+                System.out.println("CALCULANT MÈTRIQUES DE DISTORSIÓ (MSE i PAE)");
+                System.out.println("    -----------------------    ");
+                // Comparem: Imatges Originals (this.inputFolder) vs. Imatges Quantitzades
+                String OriginalPath = inputPath; // Carpeta RAWs originals
+                String CompressedPath = outputPath + "/quantitzades"; // <--- MODIFICAT
+                processor.calculateDistortionMetrics(OriginalPath, CompressedPath);
                 break;
 
 

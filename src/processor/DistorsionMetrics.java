@@ -29,15 +29,6 @@ public class DistorsionMetrics {
         return mse;
     }
 
-    public double calculatePSNR(int maxPixelValue) {
-        if (mse == 0) {
-            return Double.POSITIVE_INFINITY;
-        }
-
-        double maxSquared = maxPixelValue * maxPixelValue;
-        return 10.0 * Math.log10(maxSquared / mse);
-    }
-
     public static int calculatePeakAbsoluteError(short[][][] original, short[][][] compressed) {
 
         int bands = original.length;
