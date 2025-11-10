@@ -88,10 +88,12 @@ public class ChooseOperation {
                 System.out.print("    Quin es el valor de Q per el qual vols DeQuantitzar?:  ");
                 Scanner Q6 = new Scanner(System.in);
 
-                processor.setInputFolder(outputPath + "/quantitzades");
-                processor.setOutputFolder(outputPath+"/desquantització/Round_deQ_" + Q6.nextInt() + "_");
+                int q = Q6.nextInt();
 
-                processor.deQuantitzation(Q6.nextInt());
+                processor.setInputFolder(outputPath + "/quantitzades");
+                processor.setOutputFolder(outputPath+"/desquantització/Round_deQ_" + q + "_");
+
+                processor.deQuantitzation(q);
                 break;
 
             case 7:
