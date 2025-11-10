@@ -13,53 +13,31 @@ import static processor.Utils.*;
 
 public class ImageProcessor {
 
-    private final File inputFolder;
-    private final File outputFolder;
-    Map<String, short[][][]> Images;
+    private  File inputFolder;
+    private  File outputFolder;
+    private Map<String, short[][][]> Images;
+    private boolean isImagesUploaded;
 
     public ImageProcessor(String inputPath, String outputPath) {
         this.inputFolder = new File(inputPath);
         this.outputFolder = new File(outputPath);
+        this.isImagesUploaded = false;
         this.Images = new HashMap<>();
         if (!outputFolder.exists()) {
             outputFolder.mkdirs();
         }
     }
 
+    public void setInputFolder(String inputPath) {
+        inputFolder = new File(inputPath);
+    }
 
-
-    public void processAll() {
-
-        // .listFiles --> funció anònima que accepta tots els fitxers acabats en .raw (primer els passa a minus)
-        File[] files = inputFolder.listFiles((dir, name) -> name.toLowerCase().endsWith(".raw"));
-
-        if (files == null) {
-            System.out.println("No s'han trobat fitxers RAW a " + inputFolder.getAbsolutePath());
-            return;
-        }
-
-        for (File file : files) {
-            try {
-                RawImageConfig config = parseConfigFromFilename(file.getName());
-
-                short[][][] img = RawImageReader.readRaw(file.getAbsolutePath(), config);
-
-                String outputNameRAw = "sortida" + file.getName();
-                System.out.println("Image " + file.getName() + " processed.");
-                RawImageWriter.writeRaw(new File(outputFolder, outputNameRAw).getAbsolutePath(), img, config);
-
-
-            } catch (Exception e) {
-                System.err.println("Error processant: " + file.getName());
-                e.printStackTrace();
-            }
-        }
+    public void setOutputFolder(String outputPath) {
+        outputFolder = new File(outputPath);
     }
 
     public void uploadImages(){
         File[] files = inputFolder.listFiles((dir, name) -> name.toLowerCase().endsWith(".raw"));
-
-
 
         if (files == null) {
             System.out.println("No s'han trobat fitxers RAW a " + inputFolder.getAbsolutePath());
@@ -78,10 +56,47 @@ public class ImageProcessor {
         }
 
         System.out.println("Images Uploaded.");
+        isImagesUploaded = true;
     }
 
+
+
+    public void processAll() {
+
+        if (!isImagesUploaded) {
+            System.out.println("No hi ha imatges carregades a la memòria. No es pot processar.");
+            return;
+        }
+
+        for (Map.Entry<String, short[][][]> entry : Images.entrySet()) {
+            String fileName = entry.getKey();
+            short[][][] img = entry.getValue();
+
+            try {
+                // Utilitzem el nom de fitxer original per obtenir la configuració
+                RawImageConfig config = parseConfigFromFilename(fileName);
+
+                String outputNameRAw = "sortida" + fileName;
+
+                // Escrivim la imatge carregada a la carpeta de sortida
+                RawImageWriter.writeRaw(new File(outputFolder, outputNameRAw).getAbsolutePath(), img, config);
+
+                System.out.println("Image " + fileName + " processed and written to output.");
+
+            } catch (Exception e) {
+                System.err.println("Error processant: " + fileName);
+                e.printStackTrace();
+            }
+        }
+    }
+
+
+
     public void calculateImageEntropy() {
-        uploadImages();
+        if (!isImagesUploaded) {
+            System.out.println("No hi ha imatges carregades a la memòria. No es pot processar.");
+            return;
+        }
 
         for (Map.Entry<String, short[][][]> entry : Images.entrySet()) {
             String imageName = entry.getKey();
@@ -95,9 +110,11 @@ public class ImageProcessor {
     }
 
     public void calculateConditionalEntropy() {
-        // Asegúrate de que 'Images' esté cargado (por ejemplo, con uploadImages())
-        uploadImages();
 
+        if (!isImagesUploaded) {
+            System.out.println("No hi ha imatges carregades a la memòria. No es pot processar.");
+            return;
+        }
 
         for (Map.Entry<String, short[][][]> entry : Images.entrySet()) {
             String imageName = entry.getKey();
@@ -118,28 +135,29 @@ public class ImageProcessor {
         }
     }
 
-    public void imageQuantitzation(int q, String outputPath) {
+    public void imageQuantitzation(int q) {
 
-        File outputDir = new File(outputPath);
 
-        // 2. Comprovar si el directori existeix. Si no existeix, intentar crear-lo.
-        if (!outputDir.exists()) {
+
+        if (!outputFolder.exists()) {
             // Utilitzem mkdirs() per crear la carpeta i tots els seus pares si cal.
-            boolean created = outputDir.mkdirs();
+            boolean created = outputFolder.mkdirs();
 
             if (created) {
-                System.out.println("Directori creat amb èxit.");
+                System.out.println("Directori "+ outputFolder + " creat amb èxit.");
             }
         }
 
+        if (!isImagesUploaded) {
+            System.out.println("No hi ha imatges carregades a la memòria. No es pot processar.");
+            return;
+        }
 
-        uploadImages();
-
-        QuantitzationProcess.quanticiseRoundingAll(this.Images,q, outputPath);
+        QuantitzationProcess.quanticiseRoundingAll(this.Images,q, outputFolder);
 
     }
 
-    public void deQuantitzation(int q, String inputPath, String outputPath) {
+    public void deQuantitzation(int q) {
 
         File[] files = inputFolder.listFiles((dir, name) ->
                 name.toLowerCase().startsWith("q") && name.toLowerCase().endsWith(".raw")
@@ -151,19 +169,19 @@ public class ImageProcessor {
             return;
         }
 
-        File outputDir = new File(outputPath);
+
 
         // 2. Comprovar si el directori existeix. Si no existeix, intentar crear-lo.
-        if (!outputDir.exists()) {
+        if (!outputFolder.exists()) {
             // Utilitzem mkdirs() per crear la carpeta i tots els seus pares si cal.
-            boolean created = outputDir.mkdirs();
+            boolean created = outputFolder.mkdirs();
 
             if (created) {
                 System.out.println("Directori creat amb èxit.");
             }
         }
 
-        QuantitzationProcess.deQuanticiseRoundingAll(q, inputPath, outputPath);
+        QuantitzationProcess.deQuanticiseRoundingAll(q, inputFolder, outputFolder);
 
     }
     public void prediction(String inputPath, String outputPath) {

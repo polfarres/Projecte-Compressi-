@@ -5,13 +5,16 @@ public class Main {
     public static void main(String[] args) {
 
         ChooseOperation option = new ChooseOperation();
-        option.readOption();
 
+        while(!option.isFinished()) {
 
-        String inputPath = "resources/imatges/entrades";
-        String outputPath = "resources/imatges/sortides";
+            option.readOption();
 
-        option.ExecuteCommand(inputPath, outputPath);
+            String inputPath = "resources/imatges/entrades";
+            String outputPath = "resources/imatges/sortides";
+
+            option.ExecuteCommand(inputPath, outputPath);
+        }
 
     }
 }

@@ -10,10 +10,8 @@ import java.util.Map;
 import static processor.Utils.parseConfigFromFilename;
 
 public class QuantitzationProcess {
-    public static void quanticiseRoundingAll(Map<String, short[][][]> Images, int q, String outputPath) {
+    public static void quanticiseRoundingAll(Map<String, short[][][]> Images, int q, File outputFolder) {
 
-
-        String outputFolder = outputPath;
         for (Map.Entry<String, short[][][]> entry : Images.entrySet()) {
             String imageName = entry.getKey();
             short[][][] img = entry.getValue();
@@ -42,7 +40,10 @@ public class QuantitzationProcess {
                 // -----
 
                 System.out.println("Image " + imageName + " reduced.");
-                RawImageWriter.writeRaw(new File(outputFolder, outputNameRAw).getAbsolutePath(), img, config);
+
+                String fullOutputPath = new File(outputFolder, outputNameRAw).getAbsolutePath();
+
+                RawImageWriter.writeRaw(fullOutputPath, img, config);
 
 
             } catch (Exception e) {
@@ -52,9 +53,8 @@ public class QuantitzationProcess {
         }
     }
 
-    public static void deQuanticiseRoundingAll(int q, String inputPath, String outputPath) {
-        String outputFolder = outputPath + "/Round_deQ_" + q + "_";
-        File inputFolder = new File(inputPath);
+    public static void deQuanticiseRoundingAll(int q, File inputFolder, File outputFolder) {
+
 
         File[] files = inputFolder.listFiles((dir, name) -> name.toLowerCase().endsWith(".raw"));
 
@@ -63,9 +63,8 @@ public class QuantitzationProcess {
             return;
         }
 
-        // Crear carpeta de salida si no existe
-        File folder = new File(outputFolder);
-        if (!folder.exists()) folder.mkdirs();
+
+        if (!outputFolder.exists()) outputFolder.mkdirs();
 
         for (File file : files) {
             try {
