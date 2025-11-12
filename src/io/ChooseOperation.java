@@ -15,12 +15,12 @@ public class ChooseOperation {
         System.out.println("1.- Llegir Imatges ");
         System.out.println("2.- Calcular entropia Total de les imatges (ordre 0)");
         System.out.println("3.- Entropía condicionada grau (correlació de pixels)");
-        System.out.println("4.- Calcular entropia condicionada 4 pixels propers (ordre 1)");
+        System.out.println("4.- (NO FA RES) Calcular entropia condicionada 4 pixels propers (ordre 1)");
         System.out.println("5.- Quantització d'imatges");
         System.out.println("6.- DeQuantització d'imatges");
         System.out.println("7.- Predicció d'imatges (un cop aplicada qauntització previament)");
         System.out.println("8.- Despredicció (Reconstrucció) d'imatges");
-        System.out.println("9.- Calcular Mètriques de Distorsió (MSE i PAE) d'imatges quantitzades");
+        System.out.println("9.- (NO FA RES) Calcular Mètriques de Distorsió (MSE i PAE) d'imatges quantitzades");
         System.out.println("-----------------------------------------------------------------------");
         System.out.println("s.- Surt de l'aplicació");
 
@@ -99,23 +99,21 @@ public class ChooseOperation {
             case 7:
                 System.out.println("PREDICCIÓ D'IMATGES ");
                 System.out.println("    -----------------------    ");
-                String InputPathQuantitzades = outputPath + "/quantitzades"; // Entrada Q*.raw
-                String OutputPathPrediction = outputPath + "/prediction";     // Sortida P_Q*.raw
 
                 processor.setInputFolder(outputPath+"/quantitzades");
                 processor.setOutputFolder(outputPath + "/prediction");
 
-
-                processor.prediction(InputPathQuantitzades, OutputPathPrediction);
+                processor.prediction();
                 break;
 
             case 8:
                 System.out.println("DESPREDICCIÓ (RECONSTRUCCIÓ) D'IMATGES");
                 System.out.println("    -----------------------    ");
                 // NOTA: Cal corregir aquesta ruta a /prediction per carregar els residus P_*
-                String InputPathResidus = outputPath + "/prediction";
-                String OutputPathReconstruccio = outputPath + "/reconstruccio";
-                processor.deprediction(InputPathResidus, OutputPathReconstruccio);
+
+                processor.setInputFolder(outputPath+"/quantitzades");
+                processor.setOutputFolder(outputPath + "/reconstruccio");
+                processor.deprediction();
                 break;
 
             case 9:

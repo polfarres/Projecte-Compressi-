@@ -184,22 +184,21 @@ public class ImageProcessor {
         QuantitzationProcess.deQuanticiseRoundingAll(q, inputFolder, outputFolder);
 
     }
-    public void prediction(String inputPath, String outputPath) {
+    public void prediction() {
 
-        File inputDir = new File(inputPath);
-        File outputDir = new File(outputPath);
+;
 
         // Assegurar la creació de la carpeta de sortida (obligatori ara que escrivim)
-        if (!outputDir.exists()) {
-            outputDir.mkdirs();
+        if (!outputFolder.exists()) {
+            outputFolder.mkdirs();
         }
 
-        File[] files = inputDir.listFiles((dir, name) ->
+        File[] files = inputFolder.listFiles((dir, name) ->
                 name.toLowerCase().startsWith("q") && name.toLowerCase().endsWith(".raw")
         );
 
         if (files == null || files.length == 0) {
-            System.out.println("⚠️ ATENCIÓ: No s'han trobat fitxers quantitzats (Q*.raw) a la carpeta: " + inputPath);
+            System.out.println("⚠️ ATENCIÓ: No s'han trobat fitxers quantitzats (Q*.raw) a la carpeta: " + inputFolder.getName());
             return;
         }
 
@@ -213,14 +212,14 @@ public class ImageProcessor {
                 short[][][] imgDades = RawImageReader.readRaw(file.getAbsolutePath(), config);
 
                 // 1. Aplicar la predicció: el resultat és la matriu de RESIDUS (int[][][])
-                short[][][] residuDades = predictor.aplicarPrediccio(imgDades);
+                int[][][] residuDades = predictor.aplicarPrediccio(imgDades);
 
                 // 2. Generar el nom del fitxer de sortida (.txt)
                 String baseName = fileName.replace(".raw", "").replace(".RAW", "");
                 String txtOutputName = "PREDICCIÓ_" + baseName + ".txt";
 
                 // 3. Obtenir la ruta completa del fitxer de sortida
-                String fullOutputPath = new File(outputDir, txtOutputName).getAbsolutePath();
+                String fullOutputPath = new File(inputFolder, txtOutputName).getAbsolutePath();
 
                 // 4. GUARDAR la matriu de residus al fitxer de text
                 printMatrixToFile(residuDades, fullOutputPath, "Residus DPCM per a la imatge: " + fileName);
@@ -233,22 +232,20 @@ public class ImageProcessor {
         System.out.println("\n✅ Procés de Predicció DPCM finalitzat.");
     }
 
-    public void deprediction(String inputPath, String outputPath) {
+    public void deprediction() {
 
-        File inputDir = new File(inputPath);
-        File outputDir = new File(outputPath);
 
         // Assegurar la creació de la carpeta de sortida (obligatori ara que escrivim)
-        if (!outputDir.exists()) {
-            outputDir.mkdirs();
+        if (!outputFolder.exists()) {
+            outputFolder.mkdirs();
         }
 
-        File[] files = inputDir.listFiles((dir, name) ->
+        File[] files = inputFolder.listFiles((dir, name) ->
                 name.toLowerCase().startsWith("q") && name.toLowerCase().endsWith(".raw")
         );
 
         if (files == null || files.length == 0) {
-            System.out.println("⚠️ ATENCIÓ: No s'han trobat fitxers quantitzats (Q*.raw) a la carpeta: " + inputPath);
+            System.out.println("⚠️ ATENCIÓ: No s'han trobat fitxers quantitzats (Q*.raw) a la carpeta: " + inputFolder.getName());
             return;
         }
 
@@ -262,20 +259,20 @@ public class ImageProcessor {
                 short[][][] imgDades = RawImageReader.readRaw(file.getAbsolutePath(), config);
 
                 // 1. Aplicar la predicció: el resultat és la matriu de RESIDUS (int[][][])
-                short[][][] residuDades = predictor.aplicarPrediccio(imgDades);
+                int[][][] residuDades = predictor.aplicarPrediccio(imgDades);
 
                 // 2. Generar el nom del fitxer de sortida (.txt)
                 String baseName = fileName.replace(".raw", "").replace(".RAW", "");
                 String txtOutputName = "PREDICCIÓ_" + baseName + ".txt";
 
                 // 3. Obtenir la ruta completa del fitxer de sortida
-                String fullOutputPath = new File(outputDir, txtOutputName).getAbsolutePath();
+                String fullOutputPath = new File(outputFolder, txtOutputName).getAbsolutePath();
 
 
                 short[][][] desprediccio = predictor.reconstruirDades(residuDades);
 
                 double mse= calculatePeakAbsoluteError(imgDades,desprediccio);
-                System.out.print(mse);
+                System.out.print("mea de la imatge "  +fileName+": " +mse +"\n");
 
             } catch (Exception e) {
                 System.err.println("Error processant predicció per a: " + fileName);
@@ -288,63 +285,7 @@ public class ImageProcessor {
 
     public void calculateDistortionMetrics(String originalPath, String reconstructedPath) {
 
-        File originalDir = new File(originalPath);
-        File reconstructedDir = new File(reconstructedPath);
 
-        if (!reconstructedDir.exists() || !reconstructedDir.isDirectory()) {
-            System.err.println("❌ ERROR: La carpeta d'imatges quantitzades no existeix: " + reconstructedPath);
-            System.out.println("Primer, executa l'opció 5 (Quantització d'imatges).");
-            return;
-        }
-
-        // 1. Carregar imatges originals (utilitzem el mètode propi per carregar-les a this.Images)
-        // La crida a uploadImages() utilitza this.inputFolder (que s'ha inicialitzat amb l'originalPath)
-        uploadImages();
-
-        if (this.Images.isEmpty()) {
-            System.err.println("❌ ERROR: No s'han pogut carregar les imatges originals de " + originalPath);
-            return;
-        }
-
-        // 2. Llistar els fitxers quantitzats (.raw)
-        File[] reconstructedFiles = reconstructedDir.listFiles((dir, name) -> name.toLowerCase().endsWith(".raw"));
-
-        if (reconstructedFiles == null || reconstructedFiles.length == 0) {
-            System.err.println("❌ ERROR: No s'han trobat fitxers RAW a la carpeta de quantitzades: " + reconstructedPath);
-            return;
-        }
-
-        System.out.println("Comparant " + this.Images.size() + " imatges originals amb les QUANTITZADES:");
-
-        for (File reconstructedFile : reconstructedFiles) {
-            String compressedFileName = reconstructedFile.getName();
-
-            try {
-                // Generar el nom original per fer el 'match'.
-                String originalFileName = stripPrefixes(compressedFileName);
-
-                // Càrrega de la imatge quantitzada (short[][][])
-                RawImageConfig config = parseConfigFromFilename(compressedFileName);
-                short[][][] reconstructedImg = RawImageReader.readRaw(reconstructedFile.getAbsolutePath(), config);
-
-                // Obtenció de la imatge original carregada prèviament
-                short[][][] originalImg = this.Images.get(originalFileName);
-
-                if (originalImg != null) {
-                    // Càlcul de mètriques
-                    double mse = DistorsionMetrics.calculateMSE(originalImg, reconstructedImg);
-                    int pae = calculatePeakAbsoluteError(originalImg, reconstructedImg);
-
-                    System.out.printf("  [Fitxer Quantitzat: %s] -> MSE: %.4f | PAE: %d%n", compressedFileName, mse, pae);
-                } else {
-                    System.err.println("  ⚠️ No s'ha trobat la imatge original corresponent per a: " + originalFileName);
-                }
-
-            } catch (Exception e) {
-                System.err.println("Error processant mètriques per a: " + compressedFileName);
-                e.printStackTrace();
-            }
-        }
     }
 
 

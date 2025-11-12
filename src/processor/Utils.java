@@ -24,7 +24,7 @@ public class Utils {
         return new RawImageConfig(width, height, bands, bits, signed, bigEndian);
     }
 
-    public static void printMatrixToFile(short[][][] data, String outputPath, String description) {
+    public static void printMatrixToFile(int[][][] data, String outputPath, String description) {
         if (data == null || data.length == 0) {
             System.out.println("⚠️ Matriu buida o nul·la: " + description + ". No es crearà el fitxer.");
             return;
