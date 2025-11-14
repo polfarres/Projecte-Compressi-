@@ -10,6 +10,9 @@ import java.util.Map;
 import static processor.Utils.parseConfigFromFilename;
 
 public class QuantitzationProcess {
+    private static int Q_STEP = 5;
+
+
     public static void quanticiseRoundingAll(Map<String, short[][][]> Images, int q, File outputFolder) {
 
         for (Map.Entry<String, short[][][]> entry : Images.entrySet()) {
@@ -106,5 +109,49 @@ public class QuantitzationProcess {
 
     public static void quanticiseDeadZoneAll(Map<String, short[][][]> Images, int q) {
         //Work in progress
+
+    }
+
+    public static short[][][] quantisize(short[][][] img) {
+
+        for (int b = 0; b < img.length; b++) { // bands
+            for (int x = 0; x < img[b].length; x++) { // width
+                for (int y = 0; y < img[b][x].length; y++) { // height
+                    short val = img[b][x][y];
+                    // Aplicar cuantización por redondeo
+                    int quantized = (int) Math.round((double) val / Q_STEP) * Q_STEP;
+
+                    // Limitar el valor al rango del tipo short (-32768 a 32767)
+                    if (quantized > Short.MAX_VALUE) quantized = Short.MAX_VALUE;
+                    if (quantized < Short.MIN_VALUE) quantized = Short.MIN_VALUE;
+
+                    img[b][x][y] = (short) quantized;
+                }
+            }
+        }
+
+        return img;
+    }
+
+    public static short[][][] dequantisize(short[][][] quantizedImage) {
+        for (int b = 0; b < quantizedImage.length; b++) { // bands
+            for (int x = 0; x < quantizedImage[b].length; x++) { // width
+                for (int y = 0; y < quantizedImage[b][x].length; y++) { // height
+                    short val = quantizedImage[b][x][y];
+                    // En caso de usar índices, multiplicar por q
+                    // En este caso los valores ya están cuantizados, así que:
+                    int dequantized = val;
+
+                    // Si hubieras almacenado índices: dequantized = val * q;
+
+                    // Asegurarse del rango short
+                    if (dequantized > Short.MAX_VALUE) dequantized = Short.MAX_VALUE;
+                    if (dequantized < Short.MIN_VALUE) dequantized = Short.MIN_VALUE;
+
+                    quantizedImage[b][x][y] = (short) dequantized;
+                }
+            }
+        }
+        return quantizedImage;
     }
 }

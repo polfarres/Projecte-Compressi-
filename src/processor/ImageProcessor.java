@@ -294,13 +294,27 @@ public class ImageProcessor {
         for (Map.Entry<String, short[][][]> entry : Images.entrySet()) {
             String imageName = entry.getKey();
             short[][][] img = entry.getValue();
-            RawImageConfig config = parseConfigFromFilename(imageName);
+            PredictorDPCM predictor = new PredictorDPCM();
 
 
-            //QuantitzationProcess.quantisize()
+            short[][][] imgQ  = QuantitzationProcess.quantisize(img);
+            int[][][] imgPredicted = predictor.aplicarPrediccio(imgQ);
+
+            short[][][] imgR = predictor.reconstruirDades(imgPredicted);
+            short[][][] imgD = QuantitzationProcess.dequantisize(imgR);
+
+
+
+            System.out.print("mea de la imatge " + calculatePeakAbsoluteError(img,imgD)+"\n");
+
+
 
 
         }
+    }
+
+    public void decoder() {
+
     }
 
 
