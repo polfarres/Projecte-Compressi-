@@ -289,5 +289,20 @@ public class ImageProcessor {
     }
 
 
+    public void coder() {
+
+        for (Map.Entry<String, short[][][]> entry : Images.entrySet()) {
+            String imageName = entry.getKey();
+            short[][][] img = entry.getValue();
+            RawImageConfig config = parseConfigFromFilename(imageName);
+
+
+            //QuantitzationProcess.quantisize()
+
+
+        }
+    }
+
+
 
 }

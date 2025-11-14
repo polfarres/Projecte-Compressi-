@@ -117,11 +117,14 @@ public class ChooseOperation {
                 break;
 
             case 9:
-                System.out.println("CALCULANT MÈTRIQUES DE DISTORSIÓ (MSE i PAE)");
+                System.out.println("CODIFICANT IMATGEDS");
                 System.out.println("    -----------------------    ");
-                String OriginalPath = inputPath; // Carpeta RAWs originals
-                String CompressedPath = outputPath + "/quantitzades";
-                processor.calculateDistortionMetrics(OriginalPath, CompressedPath);
+
+                processor.setInputFolder(inputPath);
+                processor.setOutputFolder(outputPath+"/imagtes-codificades");
+
+                processor.coder();
+
                 break;
 
             default:
