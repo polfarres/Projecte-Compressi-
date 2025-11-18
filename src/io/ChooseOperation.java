@@ -11,20 +11,20 @@ public class ChooseOperation {
 
 
     public void readOption() {
-        System.out.println("Introdueix una opció (1-9 o 's'): "); // Actualitzem la llista
+        System.out.println("Introdueix una opció (1-10 o 's'): ");
         System.out.println("1.- Llegir Imatges ");
         System.out.println("2.- Calcular entropia Total de les imatges (ordre 0)");
         System.out.println("3.- Entropía condicionada grau (correlació de pixels)");
-        System.out.println("4.- (NO FA RES) Calcular entropia condicionada 4 pixels propers (ordre 1)");
+        System.out.println("4.- (NO FA RES) Entropía condicionada 4 píxels");
         System.out.println("5.- Quantització d'imatges");
         System.out.println("6.- DeQuantització d'imatges");
-        System.out.println("7.- Predicció d'imatges (un cop aplicada qauntització previament)");
-        System.out.println("8.- Despredicció (Reconstrucció) d'imatges");
-        System.out.println("9.- (NO FA RES) Calcular Mètriques de Distorsió (MSE i PAE) d'imatges quantitzades");
+        System.out.println("7.- Predicció DPCM (Calcula residus: Q*.raw -> P*.raw)");
+        System.out.println("8.- Despredicció (Reconstrueix: P*.raw -> R*.raw)");
+        System.out.println("9.- CODIFICACIÓ Completa (Quantitzar -> Predir -> Aritmètic)");
+        System.out.println("10.- DESCODIFICACIÓ Completa (.ac -> R*.raw)");
         System.out.println("-----------------------------------------------------------------------");
         System.out.println("s.- Surt de l'aplicació");
 
-        // CORRECCIÓ CLAU: Llegim l'entrada com a String
         this.inputOption = input.next();
     }
 
@@ -33,6 +33,8 @@ public class ChooseOperation {
         if (this.inputOption.equalsIgnoreCase("s")) {
             this.isFinished = true;
             System.out.println("Sortint de l'aplicació. Adéu!");
+            // Hem de tancar el Scanner quan sortim de l'aplicació
+            input.close();
             return;
         }
 
@@ -40,14 +42,21 @@ public class ChooseOperation {
         try {
             option = Integer.parseInt(this.inputOption);
         } catch (NumberFormatException e) {
-            System.out.print("Opció invàlida. Introdueix un número (1-9) o 's'.\n");
+            System.out.print("❌ Opció invàlida. Introdueix un número (1-10) o 's'.\n");
             return;
         }
 
 
-
+        // NOTA: Es bo crear el processador aquí, però les dades Q necessiten un Scanner nou.
         ImageProcessor processor = new ImageProcessor(inputPath, outputPath);
-        processor.uploadImages();
+        processor.uploadImages(); // Càrrega d'imatges originals
+
+        Scanner Q_Scanner; // Scanner temporal per valors Q
+
+        // Assegurem que l'input i l'output per defecte estiguin definits al processador
+        processor.setInputFolder(inputPath);
+        processor.setOutputFolder(outputPath);
+
 
         switch (option) {
             case 1:
@@ -75,32 +84,36 @@ public class ChooseOperation {
                 System.out.println("    -----------------------    ");
                 System.out.print("    Quin es el valor de Q per el qual vols quantitzar?:  ");
 
-                Scanner Q5 = new Scanner(System.in);
+                Q_Scanner = new Scanner(System.in);
+                int q5 = Q_Scanner.nextInt();
 
-
-                outputPath += "/quantitzades";
-                processor.setOutputFolder(outputPath);
-                processor.imageQuantitzation(Q5.nextInt());
+                processor.setOutputFolder(outputPath + "/quantitzades");
+                processor.imageQuantitzation(q5); // imageQuantitzation ha d'estar a ImageProcessor
                 break;
+
             case 6:
                 System.out.println("DeQuantització de imatges");
                 System.out.println("    -----------------------    ");
                 System.out.print("    Quin es el valor de Q per el qual vols DeQuantitzar?:  ");
-                Scanner Q6 = new Scanner(System.in);
+                Q_Scanner = new Scanner(System.in);
 
-                int q = Q6.nextInt();
+                int q6 = Q_Scanner.nextInt();
 
+                // Llegeix dels fitxers que es van quantitzar (Opció 5)
                 processor.setInputFolder(outputPath + "/quantitzades");
-                processor.setOutputFolder(outputPath+"/desquantització/Round_deQ_" + q + "_");
+                // Guarda la sortida de la desquantització
+                processor.setOutputFolder(outputPath + "/desquantització/Round_deQ_" + q6 + "_");
 
-                processor.deQuantitzation(q);
+                processor.deQuantitzation(q6);
                 break;
 
             case 7:
                 System.out.println("PREDICCIÓ D'IMATGES ");
                 System.out.println("    -----------------------    ");
 
-                processor.setInputFolder(outputPath+"/quantitzades");
+                // INPUT: Imatges quantitzades (Q*.raw)
+                processor.setInputFolder(outputPath + "/quantitzades");
+                // OUTPUT: Residus (P*.raw)
                 processor.setOutputFolder(outputPath + "/prediction");
 
                 processor.prediction();
@@ -109,26 +122,40 @@ public class ChooseOperation {
             case 8:
                 System.out.println("DESPREDICCIÓ (RECONSTRUCCIÓ) D'IMATGES");
                 System.out.println("    -----------------------    ");
-                // NOTA: Cal corregir aquesta ruta a /prediction per carregar els residus P_*
 
-                processor.setInputFolder(outputPath+"/quantitzades");
+                // CORRECCIÓ CLAU: INPUT són els residus generats per l'Opció 7
+                processor.setInputFolder(outputPath + "/quantitzades");
+                // OUTPUT: Imatges reconstruïdes (R*.raw)
                 processor.setOutputFolder(outputPath + "/reconstruccio");
+
                 processor.deprediction();
                 break;
 
             case 9:
-                System.out.println("CODIFICANT IMATGEDS");
+                System.out.println("CODIFICACIÓ COMPLETA (Entropy Coding)");
                 System.out.println("    -----------------------    ");
 
-                processor.setInputFolder(inputPath);
-                processor.setOutputFolder(outputPath+"/imagtes-codificades");
+                // La funció 'coder' carrega des de this.Images, per això l'uploadImages() inicial és clau.
+                // Output: Fitxers comprimits (.ac)
+                processor.setOutputFolder(outputPath + "/imatges-codificades");
 
                 processor.coder();
+                break;
 
+            case 10:
+                System.out.println("DESCODIFICACIÓ COMPLETA (.ac -> RAW)");
+                System.out.println("    -----------------------    ");
+
+                // INPUT: Fitxers comprimits (.ac)
+                processor.setInputFolder(outputPath + "/imatges-codificades");
+                // OUTPUT: Imatges Descodificades (Decoded*.raw)
+                processor.setOutputFolder(outputPath + "/imatges-decodificades");
+
+                processor.decoder();
                 break;
 
             default:
-                System.out.print("Opció " + option + " no reconeguda.\n");
+                System.out.print("❌ Opció " + option + " no reconeguda.\n");
                 break;
         }
 

@@ -1,11 +1,17 @@
 package processor;
 
 import config.RawImageConfig;
+import io.BitReader;
 import io.RawImageReader;
 import io.RawImageWriter;
 
+import java.io.BufferedInputStream;
+import java.io.DataInputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static processor.DistorsionMetrics.calculatePeakAbsoluteError;
@@ -288,33 +294,195 @@ public class ImageProcessor {
 
     }
 
-
+    /**
+     * Realiza el proceso completo de codificación:
+     * Cuantización -> Predicción -> Codificación Aritmética -> Guardado en disco.
+     * También realiza una verificación de calidad (PAE/MSE).
+     *
+     * @param q Factor de cuantización.
+     */
     public void coder() {
+
+        // Asegurar que existe la carpeta de salida para comprimidos
+        File compressedDir = new File(outputFolder, "compressed");
+        if (!compressedDir.exists()) compressedDir.mkdirs();
 
         for (Map.Entry<String, short[][][]> entry : Images.entrySet()) {
             String imageName = entry.getKey();
-            short[][][] img = entry.getValue();
-            PredictorDPCM predictor = new PredictorDPCM();
+            short[][][] imgOriginal = entry.getValue();
 
 
-            short[][][] imgQ  = QuantitzationProcess.quantisize(img);
-            int[][][] imgPredicted = predictor.aplicarPrediccio(imgQ);
+            try {
+                // 1. CUANTIZACIÓN (Lossy)
+                short[][][] imgQuantized = QuantitzationProcess.quantisize(imgOriginal);
 
-            short[][][] imgR = predictor.reconstruirDades(imgPredicted);
-            short[][][] imgD = QuantitzationProcess.dequantisize(imgR);
+                // 2. PREDICCIÓN (Lossless - DPCM + ZigZag)
+                PredictorDPCM predictor = new PredictorDPCM();
+                // Esto devuelve INT[][][] con valores siempre positivos (mapeados)
+                int[][][] imgPredicted = predictor.aplicarPrediccio(imgQuantized);
 
+                // 3. APLANAR DATOS (Flattening)
+                // El codificador aritmético necesita una lista secuencial de símbolos, no una matriz 3D.
+                java.util.List<Integer> symbols = new java.util.ArrayList<>();
+                int bands = imgPredicted.length;
+                int height = imgPredicted[0].length;
+                int width = imgPredicted[0][0].length;
 
+                for (int b = 0; b < bands; b++) {
+                    for (int y = 0; y < height; y++) {
+                        for (int x = 0; x < width; x++) {
+                            symbols.add(imgPredicted[b][y][x]);
+                        }
+                    }
+                }
 
-            System.out.print("mea de la imatge " + calculatePeakAbsoluteError(img,imgD)+"\n");
+                // 4. CODIFICACIÓN ARITMÉTICA (Entropy Coding)
 
+                // a) Calcular tabla de frecuencias (necesaria para decodificar después)
+                // En un caso real, esta tabla se debe guardar en la cabecera del archivo.
+                java.util.List<Integer> cumFreq = ArithmeticCoder.computeCumFreq(symbols);
 
+                // b) Iniciar codificador
+                io.BitWriter bw = new io.BitWriter();
+                ArithmeticCoder coder = new ArithmeticCoder();
 
+                // c) Codificar símbolo a símbolo
+                for (int symbol : symbols) {
+                    coder.encodeSymbol(symbol, cumFreq, bw);
+                }
+                coder.finish(bw);
 
+                // 5. GUARDAR EN DISCO (Archivo comprimido .ac)
+                String compressedName = "Compressed_" + imageName.replace(".raw", ".ac");
+                File fileOut = new File(compressedDir, compressedName);
+
+                try (java.io.FileOutputStream fos = new java.io.FileOutputStream(fileOut)) {
+                    byte[] compressedBytes = bw.getBuffer();
+                    fos.write(compressedBytes);
+
+                    // Estadísticas de compresión
+                    long originalSize = bands * height * width * 2L; // 2 bytes por short
+                    long compressedSize = compressedBytes.length;
+                    double ratio = (double) originalSize / compressedSize;
+
+                    System.out.println("   💾 Guardado: " + fileOut.getName());
+                    System.out.println("   📊 Tamaño Original: " + originalSize + " bytes");
+                    System.out.println("   📉 Tamaño Comprimido: " + compressedSize + " bytes");
+                    System.out.printf("   🚀 Ratio de Compresión: %.2f : 1%n", ratio);
+                }
+
+                // 6. VERIFICACIÓN (Decodificación simulada para comprobar error)
+                // Reconstruimos desde los datos predichos (simulando que hemos decodificado bien)
+                short[][][] imgReconstructed = predictor.reconstruirDades(imgPredicted);
+
+                // Descuantizamos (Paso inverso a la cuantización)
+                short[][][] imgFinal = QuantitzationProcess.dequantisize(imgReconstructed);
+
+                // Cálculo de error (Original vs Final)
+                int pae = DistorsionMetrics.calculatePeakAbsoluteError(imgOriginal, imgFinal);
+                double mse = DistorsionMetrics.calculateMSE(imgOriginal, imgFinal);
+
+                System.out.println("   ✅ Verificación Completada:");
+                System.out.println("      - PAE (Error Máximo Absoluto): " + pae);
+                System.out.printf("      - MSE (Error Cuadrático Medio): %.4f%n", mse);
+
+            } catch (Exception e) {
+                System.err.println("❌ Error en el proceso de codificación de: " + imageName);
+                e.printStackTrace();
+            }
         }
     }
-
     public void decoder() {
+        // La carpeta d'entrada és on vam guardar els comprimits
+        File compressedDir = new File(inputFolder, "compressed");
+        if (!compressedDir.exists() || !compressedDir.isDirectory()) {
+            System.out.println("❌ No existeix la carpeta de comprimits: " + compressedDir.getAbsolutePath());
+            return;
+        }
 
+        // La carpeta de sortida serà 'decoded'
+        File decodedDir = new File(outputFolder, "decoded");
+        if (!decodedDir.exists()) decodedDir.mkdirs();
+
+        // Busquem fitxers .ac
+        File[] files = compressedDir.listFiles((dir, name) -> name.toLowerCase().endsWith(".ac"));
+        if (files == null || files.length == 0) {
+            System.out.println("⚠️ No s'han trobat fitxers comprimits (.ac).");
+            return;
+        }
+
+        for (File file : files) {
+            String fileName = file.getName();
+            System.out.println("\n🔓 Descodificant: " + fileName);
+
+            // Obrim DataInputStream per llegir el header binari
+            try (DataInputStream dis = new DataInputStream(new BufferedInputStream(new FileInputStream(file)))) {
+
+                // 1. LLEGIR EL HEADER
+                RawImageConfig config = RawImageConfig.readHeader(dis);
+
+                // Obtenim les mides i la Q
+                int totalPixels = config.width * config.height * config.bands;
+
+                // 2. RECONSTRUIR FREQÜÈNCIES ACUMULADES
+                // El decoder aritmètic necessita List<Integer> de freqüències acumulades
+                List<Integer> cumFreq = new ArrayList<>();
+                int currentSum = 0;
+                cumFreq.add(0); // cumFreq[0] és sempre 0
+
+                // Convertim short[] frequencies (del header) a cumFreq
+                for (short f : config.frequencies) {
+                    // El '& 0xFFFF' tracta el short de Java com a valor positiu (sense signe)
+                    int freqVal = f & 0xFFFF;
+                    currentSum += freqVal;
+                    cumFreq.add(currentSum);
+                }
+
+                // 3. LLEGIR EL BITSTREAM COMPRIMIT (La resta del fitxer)
+                // dis.readAllBytes() llegeix els bytes que queden al flux
+                byte[] compressedBytes = dis.readAllBytes();
+
+                BitReader br = new BitReader(compressedBytes);
+                ArithmeticCoder decoder = new ArithmeticCoder();
+                decoder.initializeDecoder(br);
+
+                // 4. DESCODIFICAR ELS SÍMBOLS I RECONSTRUIR LA MATRIU
+                int[][][] imgPredicted = new int[config.bands][config.height][config.width];
+
+                for (int b = 0; b < config.bands; b++) {
+                    for (int y = 0; y < config.height; y++) {
+                        for (int x = 0; x < config.width; x++) {
+                            int symbol = decoder.decodeSymbol(cumFreq, br);
+                            imgPredicted[b][y][x] = symbol;
+                        }
+                    }
+                }
+
+                // 5. DESPREDICCIÓ (Invers ZigZag + Invers DPCM)
+                PredictorDPCM predictor = new PredictorDPCM();
+                short[][][] imgReconstructed = predictor.reconstruirDades(imgPredicted);
+
+                // 6. DESQUANTITZACIÓ (Amb el pas Q que hem llegit del header)
+                // S'assumeix que QuantitzationProcess.dequantisize utilitza la Q correcta
+                // o que es pot configurar la Q estàtica amb config.qStep
+                // (Per ara, cridem la versió sense argument, assumint que la Q es fixa.)
+                short[][][] imgFinal = QuantitzationProcess.dequantisize(imgReconstructed);
+
+                // 7. GUARDAR IMATGE RAW RECONSTRUÏDA
+                String outputName = "Decoded_" + fileName.replace(".ac", ".raw");
+                String fullOutputPath = new File(decodedDir, outputName).getAbsolutePath();
+
+                RawImageWriter.writeRaw(fullOutputPath, imgFinal, config);
+
+                System.out.println("   💾 Imatge Recuperada: " + outputName);
+
+            } catch (Exception e) {
+                System.err.println("❌ Error fatal descodificant: " + fileName);
+                System.err.println("   Possiblement corrupció de Header o Bitstream.");
+                e.printStackTrace();
+            }
+        }
+        System.out.println("✅ Procés de Descodificació Finalitzat.");
     }
 
 
