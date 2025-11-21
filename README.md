@@ -120,6 +120,19 @@ Image Compression Project
 * [x] Entropy of the quantized image
 * [x] Entropy of the dequantized (lossy) image
 * [x] Prediction
+* [x] Deprediction (Reconstruction)
+* [x] Distortion metrics (MSE and PAE)
+* [x] Advanced entropy coding (based code)
+
+#### Next Phase : Global Coder
+
+- [x] All functions working
+- [ ] Implement global coder pipleline
+    - [ ] Redesign choose Operation menu
+    - [ ] Redesign Debuger and coder options
+- [ ] Implement global decoder pipeline
+- [ ] Test end-to-end compression and decompression
+
 
 We are currently focusing on the first **three stages** of image compression:
 **Entropy**, **Quantization**, and **Prediction**.
