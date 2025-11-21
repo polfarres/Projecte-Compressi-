@@ -30,7 +30,7 @@ public class ImageProcessor {
         this.isImagesUploaded = false;
         this.Images = new HashMap<>();
         if (!outputFolder.exists()) {
-            outputFolder.mkdirs();
+            outputFolder.mkdirs(); //hola
         }
     }
 
