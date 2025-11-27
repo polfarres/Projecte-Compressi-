@@ -22,6 +22,7 @@ public class ChooseOperation {
         System.out.println("8.- Despredicció (Reconstrueix: P*.raw -> R*.raw)");
         System.out.println("9.- CODIFICACIÓ Completa (Quantitzar -> Predir -> Aritmètic)");
         System.out.println("10.- DESCODIFICACIÓ Completa (.ac -> R*.raw)");
+        System.out.println("11.- MÉTRICAS DE DISTORSIÓN (Original vs Descodificada)");
         System.out.println("-----------------------------------------------------------------------");
         System.out.println("s.- Surt de l'aplicació");
 
@@ -153,6 +154,17 @@ public class ChooseOperation {
 
                 processor.decoder();
                 break;
+
+            case 11:
+                System.out.println("\n[11] CÁLCULO DE MÉTRICAS (MSE/PAE).");
+
+                // Input (implícito): Imágenes originales en memoria.
+                // OutputFolder configurado para buscar las descodificadas (Salida del paso 10)
+                processor.setOutputFolder(outputPath + "/imatges-decodificades");
+
+                processor.compareOriginalWithDecoded();
+                break;
+
 
             default:
                 System.out.print("❌ Opció " + option + " no reconeguda.\n");

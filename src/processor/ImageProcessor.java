@@ -294,36 +294,44 @@ public class ImageProcessor {
 
     }
 
-    /**
-     * Realiza el proceso completo de codificación:
-     * Cuantización -> Predicción -> Codificación Aritmética -> Guardado en disco.
-     * También realiza una verificación de calidad (PAE/MSE).
-     *
-     * @param q Factor de cuantización.
-     */
     public void coder() {
+        if (this.Images.isEmpty()) {
+            System.out.println("❌ No hi ha imatges carregades per codificar.");
+            return;
+        }
 
-        // Asegurar que existe la carpeta de salida para comprimidos
         File compressedDir = new File(outputFolder, "compressed");
         if (!compressedDir.exists()) compressedDir.mkdirs();
+
+        int qVal = QuantitzationProcess.Q_STEP;
 
         for (Map.Entry<String, short[][][]> entry : Images.entrySet()) {
             String imageName = entry.getKey();
             short[][][] imgOriginal = entry.getValue();
 
+            System.out.println("\n🚀 Codificant: " + imageName + " (Q=" + qVal + ")");
 
             try {
-                // 1. CUANTIZACIÓN (Lossy)
-                short[][][] imgQuantized = QuantitzationProcess.quantisize(imgOriginal);
+                RawImageConfig config = parseConfigFromFilename(imageName);
 
-                // 2. PREDICCIÓN (Lossless - DPCM + ZigZag)
+                // 0. Deep Copy
+                short[][][] imgToProcess = deepCopy(imgOriginal);
+
+                // 1. Quantització
+                short[][][] imgQuantized = QuantitzationProcess.quantisize(imgToProcess);
+
+                // 2. Predicció
                 PredictorDPCM predictor = new PredictorDPCM();
-                // Esto devuelve INT[][][] con valores siempre positivos (mapeados)
                 int[][][] imgPredicted = predictor.aplicarPrediccio(imgQuantized);
 
-                // 3. APLANAR DATOS (Flattening)
-                // El codificador aritmético necesita una lista secuencial de símbolos, no una matriz 3D.
+                // 3. Aplanar i Histograma
                 java.util.List<Integer> symbols = new java.util.ArrayList<>();
+
+                int maxSymbols = 131072; //rang short
+
+                // CORRECCIÓ: Ara fem servir int[] per comptar, no short[]
+                int[] freqHistogram = new int[maxSymbols];
+
                 int bands = imgPredicted.length;
                 int height = imgPredicted[0].length;
                 int width = imgPredicted[0][0].length;
@@ -331,160 +339,221 @@ public class ImageProcessor {
                 for (int b = 0; b < bands; b++) {
                     for (int y = 0; y < height; y++) {
                         for (int x = 0; x < width; x++) {
-                            symbols.add(imgPredicted[b][y][x]);
+                            int val = imgPredicted[b][y][x];
+                            symbols.add(val);
+
+                            // Comptem freqüència sense por al desbordament
+                            if (val >= 0 && val < maxSymbols) {
+                                freqHistogram[val]++;
+                            }
                         }
                     }
                 }
 
-                // 4. CODIFICACIÓN ARITMÉTICA (Entropy Coding)
-
-                // a) Calcular tabla de frecuencias (necesaria para decodificar después)
-                // En un caso real, esta tabla se debe guardar en la cabecera del archivo.
+                // 4. Codificació Aritmètica
                 java.util.List<Integer> cumFreq = ArithmeticCoder.computeCumFreq(symbols);
-
-                // b) Iniciar codificador
                 io.BitWriter bw = new io.BitWriter();
                 ArithmeticCoder coder = new ArithmeticCoder();
 
-                // c) Codificar símbolo a símbolo
                 for (int symbol : symbols) {
                     coder.encodeSymbol(symbol, cumFreq, bw);
                 }
                 coder.finish(bw);
 
-                // 5. GUARDAR EN DISCO (Archivo comprimido .ac)
+                // 5. Guardar .ac
                 String compressedName = "Compressed_" + imageName.replace(".raw", ".ac");
                 File fileOut = new File(compressedDir, compressedName);
 
-                try (java.io.FileOutputStream fos = new java.io.FileOutputStream(fileOut)) {
-                    byte[] compressedBytes = bw.getBuffer();
-                    fos.write(compressedBytes);
+                // Ara passem l'int[] correctament
+                config.setCompressionHeaderData(qVal, freqHistogram);
 
-                    // Estadísticas de compresión
-                    long originalSize = bands * height * width * 2L; // 2 bytes por short
-                    long compressedSize = compressedBytes.length;
+                try (java.io.DataOutputStream dos = new java.io.DataOutputStream(
+                        new java.io.BufferedOutputStream(new java.io.FileOutputStream(fileOut)))) {
+
+                    // Escriu Header (freqüències com INTs)
+                    config.writeHeader(dos);
+
+                    // Escriu Bits
+                    dos.write(bw.getBuffer());
+
+                    long originalSize = bands * height * width * 2L;
+                    long compressedSize = fileOut.length();
                     double ratio = (double) originalSize / compressedSize;
 
-                    System.out.println("   💾 Guardado: " + fileOut.getName());
-                    System.out.println("   📊 Tamaño Original: " + originalSize + " bytes");
-                    System.out.println("   📉 Tamaño Comprimido: " + compressedSize + " bytes");
-                    System.out.printf("   🚀 Ratio de Compresión: %.2f : 1%n", ratio);
+                    System.out.println("   💾 Guardat: " + fileOut.getName());
+                    System.out.println("   📦 Mida: " + compressedSize + " bytes");
+                    System.out.printf("   📉 Rati: %.2f : 1%n", ratio);
                 }
 
-                // 6. VERIFICACIÓN (Decodificación simulada para comprobar error)
-                // Reconstruimos desde los datos predichos (simulando que hemos decodificado bien)
+                // 6. Verificació...
                 short[][][] imgReconstructed = predictor.reconstruirDades(imgPredicted);
-
-                // Descuantizamos (Paso inverso a la cuantización)
                 short[][][] imgFinal = QuantitzationProcess.dequantisize(imgReconstructed);
-
-                // Cálculo de error (Original vs Final)
                 int pae = DistorsionMetrics.calculatePeakAbsoluteError(imgOriginal, imgFinal);
                 double mse = DistorsionMetrics.calculateMSE(imgOriginal, imgFinal);
-
-                System.out.println("   ✅ Verificación Completada:");
-                System.out.println("      - PAE (Error Máximo Absoluto): " + pae);
-                System.out.printf("      - MSE (Error Cuadrático Medio): %.4f%n", mse);
+                System.out.printf("   ✅ MSE: %.4f | PAE: %d%n", mse, pae);
 
             } catch (Exception e) {
-                System.err.println("❌ Error en el proceso de codificación de: " + imageName);
                 e.printStackTrace();
             }
         }
     }
     public void decoder() {
-        // La carpeta d'entrada és on vam guardar els comprimits
-        File compressedDir = new File(inputFolder, "compressed");
-        if (!compressedDir.exists() || !compressedDir.isDirectory()) {
-            System.out.println("❌ No existeix la carpeta de comprimits: " + compressedDir.getAbsolutePath());
-            return;
+        // Asumimos que los archivos comprimidos están en la carpeta 'compressed' dentro del input o output configurado
+        // Ajusta esta ruta si tu ChooseOperation define el inputFolder directamente como la carpeta de comprimidos.
+        File compressedDir = new File(inputFolder.getAbsolutePath());
+
+        // Si no encuentra .ac en la raíz, busca en /compressed (por compatibilidad con la estructura anterior)
+        if (compressedDir.listFiles((dir, name) -> name.toLowerCase().endsWith(".ac")).length == 0) {
+            File subDir = new File(inputFolder, "compressed");
+            if (subDir.exists()) compressedDir = subDir;
         }
 
-        // La carpeta de sortida serà 'decoded'
         File decodedDir = new File(outputFolder, "decoded");
         if (!decodedDir.exists()) decodedDir.mkdirs();
 
-        // Busquem fitxers .ac
         File[] files = compressedDir.listFiles((dir, name) -> name.toLowerCase().endsWith(".ac"));
         if (files == null || files.length == 0) {
-            System.out.println("⚠️ No s'han trobat fitxers comprimits (.ac).");
+            System.out.println("⚠️ No se han encontrado archivos comprimidos (.ac) en: " + compressedDir.getAbsolutePath());
             return;
         }
 
         for (File file : files) {
             String fileName = file.getName();
-            System.out.println("\n🔓 Descodificant: " + fileName);
+            System.out.println("\n🔓 Descodificando: " + fileName);
 
-            // Obrim DataInputStream per llegir el header binari
             try (DataInputStream dis = new DataInputStream(new BufferedInputStream(new FileInputStream(file)))) {
 
-                // 1. LLEGIR EL HEADER
+                // 1. LEER HEADER
+                // Recuperamos dimensiones, Q y el histograma original
                 RawImageConfig config = RawImageConfig.readHeader(dis);
 
-                // Obtenim les mides i la Q
-                int totalPixels = config.width * config.height * config.bands;
-
-                // 2. RECONSTRUIR FREQÜÈNCIES ACUMULADES
-                // El decoder aritmètic necessita List<Integer> de freqüències acumulades
+                // 2. RECONSTRUIR FRECUENCIAS ACUMULADAS
+                // Convertimos el histograma int[] a la lista acumulada que necesita el ArithmeticCoder
                 List<Integer> cumFreq = new ArrayList<>();
                 int currentSum = 0;
-                cumFreq.add(0); // cumFreq[0] és sempre 0
+                cumFreq.add(0); // El inicio siempre es 0
 
-                // Convertim short[] frequencies (del header) a cumFreq
-                for (short f : config.frequencies) {
-                    // El '& 0xFFFF' tracta el short de Java com a valor positiu (sense signe)
-                    int freqVal = f & 0xFFFF;
-                    currentSum += freqVal;
+                for (int freq : config.frequencies) {
+                    currentSum += freq;
                     cumFreq.add(currentSum);
                 }
 
-                // 3. LLEGIR EL BITSTREAM COMPRIMIT (La resta del fitxer)
-                // dis.readAllBytes() llegeix els bytes que queden al flux
+                // 3. LEER BITSTREAM (El resto del archivo)
                 byte[] compressedBytes = dis.readAllBytes();
 
                 BitReader br = new BitReader(compressedBytes);
                 ArithmeticCoder decoder = new ArithmeticCoder();
                 decoder.initializeDecoder(br);
 
-                // 4. DESCODIFICAR ELS SÍMBOLS I RECONSTRUIR LA MATRIU
+                // 4. DECODIFICAR SÍMBOLOS
                 int[][][] imgPredicted = new int[config.bands][config.height][config.width];
 
                 for (int b = 0; b < config.bands; b++) {
                     for (int y = 0; y < config.height; y++) {
                         for (int x = 0; x < config.width; x++) {
+                            // Decodificamos un símbolo usando la tabla de frecuencias reconstruida
                             int symbol = decoder.decodeSymbol(cumFreq, br);
                             imgPredicted[b][y][x] = symbol;
                         }
                     }
                 }
 
-                // 5. DESPREDICCIÓ (Invers ZigZag + Invers DPCM)
+                // 5. DESPREDICCIÓN (Inverso DPCM + ZigZag)
                 PredictorDPCM predictor = new PredictorDPCM();
                 short[][][] imgReconstructed = predictor.reconstruirDades(imgPredicted);
 
-                // 6. DESQUANTITZACIÓ (Amb el pas Q que hem llegit del header)
-                // S'assumeix que QuantitzationProcess.dequantisize utilitza la Q correcta
-                // o que es pot configurar la Q estàtica amb config.qStep
-                // (Per ara, cridem la versió sense argument, assumint que la Q es fixa.)
+                // 6. DESCUANTIZACIÓN
+                // Usamos la lógica de descuantización.
+                // Nota: Tu implementación actual de 'quantisize' guarda los valores ya multiplicados por Q (aproximados),
+                // por lo que 'dequantisize' principalmente hace clamping.
                 short[][][] imgFinal = QuantitzationProcess.dequantisize(imgReconstructed);
 
-                // 7. GUARDAR IMATGE RAW RECONSTRUÏDA
+                // 7. GUARDAR IMAGEN RECONSTRUIDA
                 String outputName = "Decoded_" + fileName.replace(".ac", ".raw");
                 String fullOutputPath = new File(decodedDir, outputName).getAbsolutePath();
 
                 RawImageWriter.writeRaw(fullOutputPath, imgFinal, config);
 
-                System.out.println("   💾 Imatge Recuperada: " + outputName);
+                System.out.println("   💾 Imagen Recuperada: " + outputName);
+                System.out.println("   ⚙️ Parámetros recuperados: " + config.width + "x" + config.height + " Q=" + config.qStep);
+
 
             } catch (Exception e) {
-                System.err.println("❌ Error fatal descodificant: " + fileName);
-                System.err.println("   Possiblement corrupció de Header o Bitstream.");
+                System.err.println("❌ Error fatal descodificando: " + fileName);
                 e.printStackTrace();
             }
         }
-        System.out.println("✅ Procés de Descodificació Finalitzat.");
+        System.out.println("✅ Proceso de Descodificación Finalizado.");
     }
 
+    public void compareOriginalWithDecoded() {
+        if (this.Images.isEmpty()) {
+            System.out.println("⚠️ No hay imágenes originales cargadas en memoria.");
+            System.out.println("   Asegúrate de haber ejecutado 'uploadImages()' o la Opción 1 primero.");
+            return;
+        }
 
+        File decodedDir = new File(outputFolder, "decoded");
+        if (!decodedDir.exists() || !decodedDir.isDirectory()) {
+            System.out.println("❌ No existe la carpeta de imágenes descodificadas: " + decodedDir.getAbsolutePath());
+            System.out.println("   Ejecuta primero la Opción 10 (Descodificar).");
+            return;
+        }
+
+        File[] decodedFiles = decodedDir.listFiles((dir, name) -> name.toLowerCase().endsWith(".raw"));
+        if (decodedFiles == null || decodedFiles.length == 0) {
+            System.out.println("⚠️ No se han encontrado imágenes descodificadas en: " + decodedDir.getAbsolutePath());
+            return;
+        }
+
+        System.out.println("\n📊 Calculando Métricas (Original vs Descodificada):");
+        System.out.println("---------------------------------------------------");
+
+        for (File file : decodedFiles) {
+            String decodedName = file.getName();
+
+            // Reconstruir el nombre original eliminando prefijos agregados por el proceso
+            // Decoded_Compressed_Nombre.raw -> Nombre.raw
+            String originalName = decodedName.replace("Decoded_", "").replace("Compressed_", "");
+
+            short[][][] originalImg = this.Images.get(originalName);
+
+            if (originalImg != null) {
+                try {
+                    // Leemos la imagen descodificada del disco
+                    RawImageConfig config = parseConfigFromFilename(decodedName);
+                    short[][][] decodedImg = RawImageReader.readRaw(file.getAbsolutePath(), config);
+
+                    // Calculamos métricas
+                    double mse = DistorsionMetrics.calculateMSE(originalImg, decodedImg);
+                    int pae = DistorsionMetrics.calculatePeakAbsoluteError(originalImg, decodedImg);
+
+                    System.out.println("🔹 Imagen: " + originalName);
+                    System.out.printf("   MSE: %.4f\n", mse);
+                    System.out.printf("   PAE: %d\n", pae);
+                    System.out.println("---------------------------------------------------");
+
+                } catch (Exception e) {
+                    System.err.println("❌ Error leyendo imagen descodificada: " + decodedName);
+                    e.printStackTrace();
+                }
+            } else {
+                System.out.println("⚠️ No se encontró la original en memoria para: " + decodedName + " (Se buscaba: " + originalName + ")");
+            }
+        }
+    }
+
+    private short[][][] deepCopy(short[][][] source) {
+        int b = source.length;
+        int h = source[0].length;
+        int w = source[0][0].length;
+        short[][][] dest = new short[b][h][w];
+        for (int i = 0; i < b; i++) {
+            for (int j = 0; j < h; j++) {
+                System.arraycopy(source[i][j], 0, dest[i][j], 0, w);
+            }
+        }
+        return dest;
+    }
 
 }

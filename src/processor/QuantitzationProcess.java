@@ -10,7 +10,7 @@ import java.util.Map;
 import static processor.Utils.parseConfigFromFilename;
 
 public class QuantitzationProcess {
-    private static int Q_STEP = 5;
+    public static int Q_STEP = 5;
 
 
     public static void quanticiseRoundingAll(Map<String, short[][][]> Images, int q, File outputFolder) {
