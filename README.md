@@ -120,6 +120,7 @@ Image Compression Project
 * [x] Entropy of the quantized image
 * [x] Entropy of the dequantized (lossy) image
 * [x] Prediction
+* [x] Pipeline
 
 We are currently focusing on the first **three stages** of image compression:
 **Entropy**, **Quantization**, and **Prediction**.
