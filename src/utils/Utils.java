@@ -1,11 +1,10 @@
-package processor;
+package utils;
 
 
 import config.RawImageConfig;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.io.File;
 
 public class Utils {
     public static RawImageConfig parseConfigFromFilename(String filename) {

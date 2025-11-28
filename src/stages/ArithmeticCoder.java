@@ -1,7 +1,7 @@
-package processor;
+package stages;
 
-import io.BitReader;
-import io.BitWriter;
+import utils.BitReader;
+import utils.BitWriter;
 
 import java.util.ArrayList;
 import java.util.List;

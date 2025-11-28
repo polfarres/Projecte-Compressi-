@@ -1,4 +1,4 @@
-package processor;
+package stages;
 
 import config.RawImageConfig;
 import io.RawImageReader;
@@ -7,7 +7,7 @@ import io.RawImageWriter;
 import java.io.File;
 import java.util.Map;
 
-import static processor.Utils.parseConfigFromFilename;
+import static utils.Utils.parseConfigFromFilename;
 
 public class QuantitzationProcess {
     public static int Q_STEP = 5;

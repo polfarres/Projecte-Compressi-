@@ -9,11 +9,7 @@ public class Main {
         while(!option.isFinished()) {
 
             option.readOption();
-
-            String inputPath = "resources/imatges/entrades";
-            String outputPath = "resources/imatges/sortides";
-
-            option.ExecuteCommand(inputPath, outputPath);
+            option.ExecuteCommand();
         }
 
     }

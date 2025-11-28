@@ -1,7 +1,10 @@
 package processor;
 
 import config.RawImageConfig;
-import io.BitReader;
+import stages.ArithmeticCoder;
+import stages.PredictorDPCM;
+import stages.QuantitzationProcess;
+import utils.*;
 import io.RawImageReader;
 import io.RawImageWriter;
 
@@ -14,32 +17,24 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static processor.DistorsionMetrics.calculatePeakAbsoluteError;
-import static processor.Utils.*;
+import static utils.DistorsionMetrics.calculatePeakAbsoluteError;
+import static utils.Utils.*;
 
 public class ImageProcessor {
 
-    private  File inputFolder;
-    private  File outputFolder;
     private Map<String, short[][][]> Images;
-    private boolean isImagesUploaded;
+    private File inputImage;
 
-    public ImageProcessor(String inputPath, String outputPath) {
-        this.inputFolder = new File(inputPath);
-        this.outputFolder = new File(outputPath);
-        this.isImagesUploaded = false;
-        this.Images = new HashMap<>();
-        if (!outputFolder.exists()) {
-            outputFolder.mkdirs(); //hola
-        }
+    public ImageProcessor(){
+        Images = new HashMap<>();
     }
 
-    public void setInputFolder(String inputPath) {
-        inputFolder = new File(inputPath);
+    public void uploadImage(String imagePath) {
+        inputImage = new File(imagePath);
     }
 
     public void setOutputFolder(String outputPath) {
-        outputFolder = new File(outputPath);
+        File outputFolder = new File(outputPath);
     }
 
     public void uploadImages(){
@@ -64,8 +59,6 @@ public class ImageProcessor {
         System.out.println("Images Uploaded.");
         isImagesUploaded = true;
     }
-
-
 
     public void processAll() {
 
@@ -95,8 +88,6 @@ public class ImageProcessor {
             }
         }
     }
-
-
 
     public void calculateImageEntropy() {
         if (!isImagesUploaded) {
@@ -288,7 +279,6 @@ public class ImageProcessor {
         System.out.println("\n✅ Procés de Predicció DPCM finalitzat.");
     }
 
-
     public void calculateDistortionMetrics(String originalPath, String reconstructedPath) {
 
 
@@ -352,7 +342,7 @@ public class ImageProcessor {
 
                 // 4. Codificació Aritmètica
                 java.util.List<Integer> cumFreq = ArithmeticCoder.computeCumFreq(symbols);
-                io.BitWriter bw = new io.BitWriter();
+                BitWriter bw = new BitWriter();
                 ArithmeticCoder coder = new ArithmeticCoder();
 
                 for (int symbol : symbols) {
@@ -397,6 +387,7 @@ public class ImageProcessor {
             }
         }
     }
+
     public void decoder() {
         // Asumimos que los archivos comprimidos están en la carpeta 'compressed' dentro del input o output configurado
         // Ajusta esta ruta si tu ChooseOperation define el inputFolder directamente como la carpeta de comprimidos.

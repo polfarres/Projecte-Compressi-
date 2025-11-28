@@ -1,4 +1,4 @@
-package processor;
+package stages;
 
 /**
  * Implementa una predicció DPCM amb dades d'entrada de tipus short.

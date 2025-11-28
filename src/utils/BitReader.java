@@ -1,4 +1,4 @@
-package io;
+package utils;
 
 /**
  * Traducció de la classe BitReader de C++ a Java.
