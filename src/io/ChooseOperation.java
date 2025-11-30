@@ -49,7 +49,7 @@ public class ChooseOperation {
         };
 
         String[] prodOptions = new String[]{
-                "CODIFICACIÓ Completa (Quantitzar -> Predir -> Aritmètic)",
+                "CODIFICACIÓ Completa (Decorrelació -> Quantització -> Codificació Aritmética: .ac)",
                 "DESCODIFICACIÓ Completa (.ac -> R*.raw)",
                 "MÉTRICAS DE DISTORSIÓN (Original vs Descodificada)",
                 "s.- Go Back"

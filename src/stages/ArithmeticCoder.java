@@ -150,6 +150,36 @@ public class ArithmeticCoder {
     }
 
     public void encodeImage(Image image) {
+        BitWriter bw = new BitWriter();
 
+        // Normalizamos la imagen (para que no tenga negativos si es signed)
+
+
+        // Extraiem els símbols de la imatge
+        List<Integer> symbols = getIntegers(image);
+
+        // Calculem la taula de freqüències acumulades
+        java.util.List<Integer> cumFreq = ArithmeticCoder.computeCumFreq(symbols);
+
+        for (int symbol : symbols) {
+            encodeSymbol(symbol, cumFreq, bw);
+        }
+        finish(bw);
+    }
+
+    private static List<Integer> getIntegers(Image image) {
+        List<Integer> symbols = new ArrayList<>();
+
+        int maxSymbols = 131072;
+
+        for (int b = 0; b < image.bands; b++) {
+            for (int y = 0; y < image.height; y++) {
+                for (int x = 0; x < image.width; x++) {
+                    int val = image.img[b][y][x];
+                    symbols.add(val);
+                }
+            }
+        }
+        return symbols;
     }
 }

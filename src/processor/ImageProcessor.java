@@ -154,7 +154,7 @@ public class ImageProcessor {
             image.name = image.name.replace(".raw", ".ac");
             writeCompressedImage(image);
     }
-}
+
 
 /*
 
