@@ -2,15 +2,13 @@ package io;
 
 import image.Image;
 
-import javax.imageio.ImageIO;
-import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
-public class RawImageWriter {
+public class OutputImageWriter {
 
     public static void writeRaw(Image image) throws IOException {
 
@@ -65,5 +63,7 @@ public class RawImageWriter {
         }
     } //✅
 
-    public static void writeCompressedImage(String path, Image image) throws IOException {}
+    public static void writeCompressedImage(Image image) throws IOException {
+
+    }
 }

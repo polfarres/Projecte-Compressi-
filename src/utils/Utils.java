@@ -2,9 +2,8 @@ package utils;
 
 
 import image.Image;
-import io.RawImageWriter;
+import io.OutputImageWriter;
 
-import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -36,7 +35,16 @@ public class Utils {
 
     public static void writeResult(Image image) {
         try {
-            RawImageWriter.writeRaw(image);
+            OutputImageWriter.writeRaw(image);
+
+        } catch (Exception e) {
+            System.err.println("Error processant: " + image.name);
+        }
+    }
+
+    public static void writeCompressedImage(Image image) {
+        try {
+            OutputImageWriter.writeCompressedImage(image);
 
         } catch (Exception e) {
             System.err.println("Error processant: " + image.name);

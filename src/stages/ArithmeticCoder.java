@@ -1,5 +1,6 @@
 package stages;
 
+import image.Image;
 import utils.BitReader;
 import utils.BitWriter;
 
@@ -146,5 +147,9 @@ public class ArithmeticCoder {
             cum.add(currentSum);
         }
         return cum;
+    }
+
+    public void encodeImage(Image image) {
+
     }
 }

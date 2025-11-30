@@ -1,10 +1,12 @@
 package processor;
 import image.Image;
+import stages.ArithmeticCoder;
 import stages.PredictorDPCM;
 import stages.Quantitzation;
 import utils.*;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 
 import static utils.Utils.*;
@@ -12,16 +14,15 @@ import static utils.Utils.*;
 public class ImageProcessor {
 
     private String inputImage;
-    Image image = null;
 
     public void uploadImage(String imagePath) {
         inputImage = imagePath;
+        readImage();
     } //✅
 
     public Image readImage() {
 
         Image image = null;
-
             try {
                 assert this.inputImage != null;
                 image = parseConfigFromFilename(this.inputImage);
@@ -34,14 +35,12 @@ public class ImageProcessor {
                 System.err.println("Error processant: " + this.inputImage + "no s'ha pogut llegir.");
                 e.printStackTrace();
             }
-
-
         return image;
     } //✅
 
     public void calculateImageEntropyTest() { //✅
 
-        image = readImage();
+        Image image = readImage();
         double H = Entropy.imageEntropy(image);
         System.out.printf("Imagen: %s -> Entropía total H(X): %.4f bits%n", image.name, H);
 
@@ -49,18 +48,15 @@ public class ImageProcessor {
 
     public void calculateConditionalEntropyTest() {
 
-        image = readImage();
-
+        Image image = readImage();
         double Hcond = Entropy.conditionalEntropy(image);
-
         System.out.printf("Imagen: %s -> Entropía condicional H(R|L): %.4f bits%n", image.name, Hcond);
 
     } //✅
 
     public void calculateConditionalEntropy4PixelsTest() {
 
-        image = readImage();
-
+        Image image = readImage();
         // 1. Calcular distribución conjunta P(l, r)
         //Probabilidad condicionada del píxel vecino en sus 4 cardinalidades
         Map<String, Double> pJoint = Probability.jointProbability4(image.img);
@@ -78,8 +74,7 @@ public class ImageProcessor {
 
     public void imageQuantitzationTest(int q) {
 
-        image = readImage();
-
+        Image image = readImage();
         Quantitzation quantitzation = Quantitzation.init(q);
         quantitzation.quanticiseDeadZone(image);
         System.out.println("Image " + image.name + " reduced.");
@@ -92,8 +87,7 @@ public class ImageProcessor {
 
     public void deQuantitzationTest() {
 
-        image = readImage();
-
+        Image image = readImage();
         int q = 0;
 
         try {
@@ -112,8 +106,7 @@ public class ImageProcessor {
 
     public void predictionTest() {
 
-        image = readImage();
-
+        Image image = readImage();
         PredictorDPCM predictor = new PredictorDPCM();
 
         // 1. Aplicar la predicció: el resultat és la matriu de RESIDUS
@@ -126,8 +119,8 @@ public class ImageProcessor {
 
     public void depredictionTest() {
 
-        PredictorDPCM predictor = new PredictorDPCM();
         Image image = readImage();
+        PredictorDPCM predictor = new PredictorDPCM();
 
         predictor.aplicarPrediccioPixelAnterior(image);
         predictor.desferPrediccioPixelAnterior(image);
@@ -140,10 +133,30 @@ public class ImageProcessor {
 
     public void compressImage() {
 
+            PredictorDPCM predictor = new PredictorDPCM();
+            Quantitzation quantitzator = new Quantitzation();
+            ArithmeticCoder arithmeticCoder = new ArithmeticCoder();
+            Image image = readImage();
 
+            // 1. Decorrelació DPCM
+            predictor.aplicarPrediccioPixelAnterior(image);
+
+            // 2. Quantització amb Q default
+            quantitzator.quanticiseDeadZone(image);
+
+
+            // 4. Codificació Aritmètica
+            arithmeticCoder.encodeImage(image);
+
+
+            // 5. Escribim el fitxer comprimit
+            System.out.println("Imatge " + image.name + " compressed.");
+            image.name = image.name.replace(".raw", ".ac");
+            writeCompressedImage(image);
     }
+}
 
-    /*
+/*
 
     public void decoder() {
         // Asumimos que los archivos comprimidos están en la carpeta 'compressed' dentro del input o output configurado

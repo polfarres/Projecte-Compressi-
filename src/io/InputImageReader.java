@@ -4,7 +4,7 @@ import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
-public class RawImageReader {
+public class InputImageReader {
 
     public static short[][][] readRaw(String path, int width, int height, int bands, int bitsPerSample,
                                       boolean signed, boolean bigEndian) throws IOException {

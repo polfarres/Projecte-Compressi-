@@ -1,6 +1,6 @@
 package image;
 
-import io.RawImageReader;
+import io.InputImageReader;
 
 import java.io.DataOutputStream;
 import java.io.File;
@@ -34,7 +34,7 @@ public class Image {
 
 
         try {
-            short[][][] src = RawImageReader.readRaw(inputImage, width, height, bands, bitsPerSample,
+            short[][][] src = InputImageReader.readRaw(inputImage, width, height, bands, bitsPerSample,
                     signed, bigEndian);
 
             int d1 = src.length;

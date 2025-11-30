@@ -1,9 +1,6 @@
 package stages;
 
 import image.Image;
-import io.RawImageWriter;
-
-import java.io.File;
 
 public class Quantitzation {
 

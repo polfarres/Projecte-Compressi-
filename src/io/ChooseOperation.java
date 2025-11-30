@@ -168,7 +168,7 @@ public class ChooseOperation {
                 System.out.println(TerminalUtils.MAGENTA + "CODIFICACIÓ COMPLETA (Entropy Coding)" + TerminalUtils.RESET);
                 System.out.println("    -----------------------    ");
 
-                spinner.start("Codificant imatge (entropy coding)...");
+                spinner.start("Codificant imatge (arithmetic encoding)...");
                 imageProcessor.compressImage();
                 spinner.stop();
                 break;
