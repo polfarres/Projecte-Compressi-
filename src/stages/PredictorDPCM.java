@@ -1,115 +1,150 @@
 package stages;
 
-/**
- * Implementa una predicció DPCM amb dades d'entrada de tipus short.
- * - Predictor: Píxel ESQUERRE (B)
- * - Excepció: Píxels de la Primera Columna utilitzen el píxel de DALT (A)
- * - Exepeció 2: El primer pixel la seva predicció és de 0
- * * NOTA: Les operacions de resta/suma es fan amb 'int' per evitar overflow.
- */
+import image.Image;
+
 public class PredictorDPCM {
 
-    private int mapSignedToUnsigned(int valor) {
-        if (valor >= 0) {
-            // 0 -> 0, 1 -> 2, 2 -> 4, ... (Parells)
-            return 2 * valor;
-        } else {
-            // -1 -> 1, -2 -> 3, -3 -> 5, ... (Senars)
-            return -2 * valor - 1;
-        }
-    }
+    public void aplicarPrediccioPixelAnterior(Image image) {
 
+        for (int b = 0; b < image.bands; b++) {
+            for (int x = 0; x < image.height; x++) {
 
-    private int mapUnsignedToSigned(int valor) {
-        if (valor % 2 == 0) {
-            // Cas parell (origina valors >= 0)
-            return valor / 2;
-        } else {
-            // Cas senar (origina valors < 0)
-            return -(valor + 1) / 2;
-        }
-    }
+                // Para el primer píxel de cada fila no hay izquierdo → lo dejamos igual
+                int prevPixel = image.img[b][x][0];
 
-    public int[][][] aplicarPrediccio(short[][][] dades) {
+                for (int y = 1; y < image.width; y++) {
 
-        int numBandes = dades.length;
-        int alçada = dades[0].length;
-        int amplada = dades[0][0].length;
+                    int actual = image.img[b][x][y];
 
-        // Matriu de residus mapejats: ha de ser INT
-        int[][][] residuMapejat = new int[numBandes][alçada][amplada];
+                    // Predictor: píxel de la izquierda
+                    int predicho = prevPixel;
 
-        for (int b = 0; b < numBandes; b++) {
-            for (int y = 0; y < alçada; y++) {
-                for (int x = 0; x < amplada; x++) {
+                    // Calculamos el error de predicción
+                    int error = actual - predicho;
 
-                    int valorActual = dades[b][y][x]; // int per seguretat
-                    int predictor;
+                    // Guardamos el error en la imagen
+                    image.img[b][x][y] = error;
 
-                    // --- Càlcul del Predictor (Idèntic a la teva lògica) ---
-                    if (x == 0) {
-                        if (y == 0) {
-                            predictor = 0;
-                        } else {
-                            predictor = dades[b][y - 1][x];
-                        }
-                    } else {
-                        predictor = dades[b][y][x - 1];
-                    }
-
-                    // 1. Càlcul del Residu Original (Z)
-                    int residuOriginal = valorActual - predictor;
-
-                    // 2. Aplicació del Mapeig Bijectiu (Z -> N)
-                    residuMapejat[b][y][x] = mapSignedToUnsigned(residuOriginal);
+                    // Actualizamos prevPixel usando el actual
+                    prevPixel = actual;
                 }
             }
         }
-
-        return residuMapejat;
     }
 
-    public short[][][] reconstruirDades(int[][][] matriuResidus) {
+    public void desferPrediccioPixelAnterior(Image image) {
 
-        int numBandes = matriuResidus.length;
-        int alçada = matriuResidus[0].length;
-        int amplada = matriuResidus[0][0].length;
+        for (int b = 0; b < image.bands; b++) {
+            for (int x = 0; x < image.height; x++) {
 
-        short[][][] dadesReconstruides = new short[numBandes][alçada][amplada];
+                // El primer píxel de cada fila NO se predijo → está tal cual
+                int reconstructed = image.img[b][x][0];
 
-        for (int b = 0; b < numBandes; b++) {
-            for (int y = 0; y < alçada; y++) {
-                for (int x = 0; x < amplada; x++) {
+                for (int y = 1; y < image.width; y++) {
 
-                    int residuMapejat = matriuResidus[b][y][x];
+                    int error = image.img[b][x][y];
 
-                    // 1. Aplicació del Mapeig Invers (N -> Z)
-                    int residuOriginal = mapUnsignedToSigned(residuMapejat);
+                    // Predictor: píxel de la izquierda (ya reconstruido)
+                    int predicho = reconstructed;
 
-                    int predictor;
+                    // Reconstrucción del valor real
+                    int pixelReal = predicho + error;
 
-                    // --- Càlcul del Predictor (Idèntic a la teva lògica) ---
-                    if (x == 0) {
-                        if (y == 0) {
-                            predictor = 0;
-                        } else {
-                            // Utilitzem el valor reconstruït (int)
-                            predictor = dadesReconstruides[b][y - 1][x];
-                        }
-                    } else {
-                        // Utilitzem el valor reconstruït (int)
-                        predictor = dadesReconstruides[b][y][x - 1];
-                    }
+                    // Guardamos el valor restaurado
+                    image.img[b][x][y] = pixelReal;
 
-                    // 2. Càlcul de la Reconstrucció: Original = Residu + Predictor
-                    int valorReconstruït = residuOriginal + predictor;
-
-                    // 3. Emmagatzemar, amb CASTEIG (assumint que el valor final entra en un short)
-                    dadesReconstruides[b][y][x] = (short) valorReconstruït;
+                    // Actualizamos reconstructed con el píxel real recién restaurado
+                    reconstructed = pixelReal;
                 }
             }
         }
-
-        return dadesReconstruides;
     }
+
+    public void aplicarPrediccio3Veins(Image image) {
+
+        for (int b = 0; b < image.bands; b++) {
+            for (int x = 0; x < image.height; x++) {
+                for (int y = 0; y < image.width; y++) {
+
+                    int pred;
+
+                    // Regiones de borde
+                    if (x == 0 && y == 0) {
+                        pred = 0; // primer píxel, sin vecinos
+                    }
+                    else if (x == 0) {
+                        pred = image.img[b][x][y - 1]; // solo izquierda
+                    }
+                    else if (y == 0) {
+                        pred = image.img[b][x - 1][y]; // solo arriba
+                    }
+                    else {
+                        // Vecinos disponibles
+                        int L  = image.img[b][x][y - 1];
+                        int U  = image.img[b][x - 1][y];
+                        int UL = image.img[b][x - 1][y - 1];
+
+                        // Predictor LOCO-I
+                        if (UL >= Math.max(L, U)) {
+                            pred = Math.min(L, U);
+                        }
+                        else if (UL <= Math.min(L, U)) {
+                            pred = Math.max(L, U);
+                        } else {
+                            pred = L + U - UL;
+                        }
+                    }
+
+                    int actual = image.img[b][x][y];
+                    int error = actual - pred;
+
+                    image.img[b][x][y] = error;
+                }
+            }
+        }
+    } //Lo he pro y es una mierda, la entropia empeora
+
+    public void desferPrediccio3Veins(Image image) {
+
+        for (int b = 0; b < image.bands; b++) {
+            for (int x = 0; x < image.height; x++) {
+                for (int y = 0; y < image.width; y++) {
+
+                    int pred;
+
+                    if (x == 0 && y == 0) {
+                        pred = 0;
+                    }
+                    else if (x == 0) {
+                        pred = image.img[b][x][y - 1];
+                    }
+                    else if (y == 0) {
+                        pred = image.img[b][x - 1][y];
+                    }
+                    else {
+                        int L  = image.img[b][x][y - 1];
+                        int U  = image.img[b][x - 1][y];
+                        int UL = image.img[b][x - 1][y - 1];
+
+                        if (UL >= Math.max(L, U)) {
+                            pred = Math.min(L, U);
+                        }
+                        else if (UL <= Math.min(L, U)) {
+                            pred = Math.max(L, U);
+                        } else {
+                            pred = L + U - UL;
+                        }
+                    }
+
+                    int error = image.img[b][x][y];
+                    int pixelReal = pred + error;
+
+                    image.img[b][x][y] = pixelReal;
+                }
+            }
+        }
+    }
+
+
+
 }

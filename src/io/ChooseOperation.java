@@ -1,4 +1,5 @@
 package io;
+import image.Image;
 import processor.ImageProcessor;
 
 import java.util.Scanner;
@@ -11,10 +12,10 @@ public class ChooseOperation {
     Scanner input = new Scanner(System.in);
     private boolean isFinished = false;
 
-    //Spinner
+    //Spinner UI
     TerminalUtils.Spinner spinner = new TerminalUtils.Spinner();
 
-    //Paths
+    //Principal classe de procesamiento
     ImageProcessor imageProcessor = new ImageProcessor();
 
     //Menu optins
@@ -39,12 +40,12 @@ public class ChooseOperation {
                 "Llegir Imatges",
                 "Calcular entropia Total de les imatges (ordre 0)",
                 "Entropía condicionada grau (correlació de pixels)",
-                "(NO FA RES) Entropía condicionada 4 píxels",
+                "Entropía condicionada 4 píxels cardinals",
                 "Quantització d'imatges",
                 "DeQuantització d'imatges",
                 "Predicció DPCM (Calcula residus: Q*.raw -> P*.raw)",
                 "Despredicció (Reconstrueix: P*.raw -> R*.raw)",
-                "s.- Go Back"
+                "Press 's'.- Go Back"
         };
 
         String[] prodOptions = new String[]{
@@ -70,7 +71,7 @@ public class ChooseOperation {
         } else {
             this.inputOption = "s"; // Exit chosen or fallback
         }
-    }
+    } //✅
 
     public void ExecuteCommand(){
 
@@ -93,34 +94,34 @@ public class ChooseOperation {
             return;
         }
 
-
-        ImageProcessor processor = new ImageProcessor();
         Scanner Q_Scanner; // Scanner temporal per valors Q
 
         setInputImage();
 
         switch (option) {
             case 1:
-                System.out.println(TerminalUtils.CYAN + "Procesamiento io de las imagenes en raw." + TerminalUtils.RESET);
+                System.out.println(TerminalUtils.CYAN + "Lectura io de la imagen en raw." + TerminalUtils.RESET);
                 System.out.println("    -----------------------    ");
-                spinner.start("Processant imatges...");
-                //processor.processAll();
-                spinner.stop();
+                Image img = imageProcessor.readImage();
                 break;
             case 2:
-                System.out.println(TerminalUtils.YELLOW + "Entropía total de les imatges: " + TerminalUtils.RESET);
+                System.out.println(TerminalUtils.YELLOW + "Entropía total de la imatge: " + TerminalUtils.RESET);
                 System.out.println("    -----------------------    ");
-                //processor.calculateImageEntropy();
+                imageProcessor.calculateImageEntropyTest();
                 break;
             case 3:
                 System.out.println(TerminalUtils.YELLOW + "Entropía condicionada grau (correlació de pixels) " + TerminalUtils.RESET);
                 System.out.println("    -----------------------    ");
-                //processor.calculateConditionalEntropy();
+                spinner.start("Processant...");
+                imageProcessor.calculateConditionalEntropyTest();
+                spinner.stop();
                 break;
             case 4:
                 System.out.println(TerminalUtils.YELLOW + "Entropía condicionada (correlació de 4 píxels propers) " + TerminalUtils.RESET);
                 System.out.println("    -----------------------    ");
-                System.out.println("   Work in progress   ");
+                spinner.start("Processant...");
+                imageProcessor.calculateConditionalEntropy4PixelsTest();
+                spinner.stop();
                 break;
             case 5:
                 System.out.println(TerminalUtils.GREEN + "Quantització de imatges" + TerminalUtils.RESET);
@@ -128,29 +129,20 @@ public class ChooseOperation {
                 System.out.print("    Quin es el valor de Q per el qual vols quantitzar?:  ");
 
                 Q_Scanner = new Scanner(System.in);
-                int q5 = Q_Scanner.nextInt();
+                int q = Q_Scanner.nextInt();
 
                 //processor.setOutputFolder(outputPath + "/quantitzades");
-                spinner.start("Quantitzant (Q=" + q5 + ")...");
-                //processor.imageQuantitzation(q5); // imageQuantitzation ha d'estar a ImageProcessor
+                spinner.start("Quantitzant (Q=" + q + ")...");
+                imageProcessor.imageQuantitzationTest(q); // imageQuantitzation ha d'estar a ImageProcessor
                 spinner.stop();
                 break;
 
             case 6:
                 System.out.println(TerminalUtils.GREEN + "DeQuantització de imatges" + TerminalUtils.RESET);
                 System.out.println("    -----------------------    ");
-                System.out.print("    Quin es el valor de Q per el qual vols DeQuantitzar?:  ");
-                Q_Scanner = new Scanner(System.in);
 
-                int q6 = Q_Scanner.nextInt();
-
-                // Llegeix dels fitxers que es van quantitzar (Opció 5)
-                //processor.setInputFolder(outputPath + "/quantitzades");
-                // Guarda la sortida de la desquantització
-                //processor.setOutputFolder(outputPath + "/desquantització/Round_deQ_" + q6 + "_");
-
-                spinner.start("DeQuantitzant (Q=" + q6 + ")...");
-                //processor.deQuantitzation(q6);
+                spinner.start("DeQuantitzant...");
+                imageProcessor.deQuantitzationTest();
                 spinner.stop();
                 break;
 
@@ -158,13 +150,8 @@ public class ChooseOperation {
                 System.out.println(TerminalUtils.BLUE + "PREDICCIÓ D'IMATGES " + TerminalUtils.RESET);
                 System.out.println("    -----------------------    ");
 
-                // INPUT: Imatges quantitzades (Q*.raw)
-                //processor.setInputFolder(outputPath + "/quantitzades");
-                // OUTPUT: Residus (P*.raw)
-                //processor.setOutputFolder(outputPath + "/prediction");
-
                 spinner.start("Calculant residus (DPCM)...");
-                //processor.prediction();
+                imageProcessor.predictionTest();
                 spinner.stop();
                 break;
 
@@ -172,13 +159,8 @@ public class ChooseOperation {
                 System.out.println(TerminalUtils.BLUE + "DESPREDICCIÓ (RECONSTRUCCIÓ) D'IMATGES" + TerminalUtils.RESET);
                 System.out.println("    -----------------------    ");
 
-                // CORRECCIÓ CLAU: INPUT són els residus generats per l'Opció 7
-                //processor.setInputFolder(outputPath + "/quantitzades");
-                // OUTPUT: Imatges reconstruïdes (R*.raw)
-                //processor.setOutputFolder(outputPath + "/reconstruccio");
-
                 spinner.start("Reconstruint imatges...");
-                //processor.deprediction();
+                imageProcessor.depredictionTest();
                 spinner.stop();
                 break;
 
@@ -186,12 +168,8 @@ public class ChooseOperation {
                 System.out.println(TerminalUtils.MAGENTA + "CODIFICACIÓ COMPLETA (Entropy Coding)" + TerminalUtils.RESET);
                 System.out.println("    -----------------------    ");
 
-                // La funció 'coder' carrega des de this.Images, per això l'uploadImages() inicial és clau.
-                // Output: Fitxers comprimits (.ac)
-                //processor.setOutputFolder(outputPath + "/imatges-codificades");
-
-                spinner.start("Codificant imatges (entropy coding)...");
-                //processor.coder();
+                spinner.start("Codificant imatge (entropy coding)...");
+                imageProcessor.compressImage();
                 spinner.stop();
                 break;
 
@@ -230,7 +208,7 @@ public class ChooseOperation {
     public void setInputImage(){
         System.out.println("Introdueix el path de la imatge d'entrada (raw): ");
         String path = input.nextLine();
-        //imageProcessor.uploadImage(path);
+        imageProcessor.uploadImage(path);
     }
 
     public boolean isFinished() {

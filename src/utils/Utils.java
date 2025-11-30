@@ -1,13 +1,16 @@
 package utils;
 
 
-import config.RawImageConfig;
+import image.Image;
+import io.RawImageWriter;
+
+import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 
 public class Utils {
-    public static RawImageConfig parseConfigFromFilename(String filename) {
+    public static Image parseConfigFromFilename(String filename) {
         // Exemple simple: n1_GRAY.ube8_1_2560_2048.raw
         String name = filename.split("\\.")[1]; // "ube8_1_2560_2048"
         String[] parts = name.split("_");
@@ -20,7 +23,24 @@ public class Utils {
         boolean signed = parts[0].contains("s");   // conté "s" -> signed
         boolean bigEndian = parts[0].contains("be"); // conté "be" -> big endian
 
-        return new RawImageConfig(width, height, bands, bits, signed, bigEndian);
+        return new Image(width, height, bands, bits, signed, bigEndian, filename);
+    } //✅
+
+    public static int readQuantization(String path) throws IOException {
+
+        String name = path.split("Q")[1];// "ube8_1_2560_2048"
+        String[] parts = name.split("_");
+
+        return Integer.parseInt(parts[1]); // El que correspon a la Q
+    } //✅
+
+    public static void writeResult(Image image) {
+        try {
+            RawImageWriter.writeRaw(image);
+
+        } catch (Exception e) {
+            System.err.println("Error processant: " + image.name);
+        }
     }
 
     public static void printMatrixToFile(int[][][] data, String outputPath, String description) {

@@ -1,392 +1,149 @@
 package processor;
-
-import config.RawImageConfig;
-import stages.ArithmeticCoder;
+import image.Image;
 import stages.PredictorDPCM;
-import stages.QuantitzationProcess;
+import stages.Quantitzation;
 import utils.*;
-import io.RawImageReader;
-import io.RawImageWriter;
 
-import java.io.BufferedInputStream;
-import java.io.DataInputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
+import java.io.IOException;
 import java.util.Map;
 
-import static utils.DistorsionMetrics.calculatePeakAbsoluteError;
 import static utils.Utils.*;
 
 public class ImageProcessor {
 
-    private Map<String, short[][][]> Images;
-    private File inputImage;
-
-    public ImageProcessor(){
-        Images = new HashMap<>();
-    }
+    private String inputImage;
+    Image image = null;
 
     public void uploadImage(String imagePath) {
-        inputImage = new File(imagePath);
-    }
+        inputImage = imagePath;
+    } //✅
 
-    public void setOutputFolder(String outputPath) {
-        File outputFolder = new File(outputPath);
-    }
+    public Image readImage() {
 
-    public void uploadImages(){
-        File[] files = inputFolder.listFiles((dir, name) -> name.toLowerCase().endsWith(".raw"));
-
-        if (files == null) {
-            System.out.println("No s'han trobat fitxers RAW a " + inputFolder.getAbsolutePath());
-            return;
-        }
-
-        for (File file : files) {
-            try {
-                RawImageConfig config = parseConfigFromFilename(file.getName());
-                short[][][] img = RawImageReader.readRaw(file.getAbsolutePath(), config);
-                Images.put(file.getName(), img);
-            } catch (Exception e) {
-                System.err.println("Error processant: " + file.getName());
-                e.printStackTrace();
-            }
-        }
-
-        System.out.println("Images Uploaded.");
-        isImagesUploaded = true;
-    }
-
-    public void processAll() {
-
-        if (!isImagesUploaded) {
-            System.out.println("No hi ha imatges carregades a la memòria. No es pot processar.");
-            return;
-        }
-
-        for (Map.Entry<String, short[][][]> entry : Images.entrySet()) {
-            String fileName = entry.getKey();
-            short[][][] img = entry.getValue();
+        Image image = null;
 
             try {
-                // Utilitzem el nom de fitxer original per obtenir la configuració
-                RawImageConfig config = parseConfigFromFilename(fileName);
-
-                String outputNameRAw = "sortida" + fileName;
-
-                // Escrivim la imatge carregada a la carpeta de sortida
-                RawImageWriter.writeRaw(new File(outputFolder, outputNameRAw).getAbsolutePath(), img, config);
-
-                System.out.println("Image " + fileName + " processed and written to output.");
+                assert this.inputImage != null;
+                image = parseConfigFromFilename(this.inputImage);
+                System.out.println();
+                System.out.println("Image " + image.name + " read with config: ");
+                image.printInfo();
+                System.out.println("Image " + image.name + " processed and written to memory.");
 
             } catch (Exception e) {
-                System.err.println("Error processant: " + fileName);
+                System.err.println("Error processant: " + this.inputImage + "no s'ha pogut llegir.");
                 e.printStackTrace();
             }
-        }
-    }
-
-    public void calculateImageEntropy() {
-        if (!isImagesUploaded) {
-            System.out.println("No hi ha imatges carregades a la memòria. No es pot processar.");
-            return;
-        }
-
-        for (Map.Entry<String, short[][][]> entry : Images.entrySet()) {
-            String imageName = entry.getKey();
-            short[][][] img = entry.getValue();
-
-            Map<Short, Double> p = CalculateProbability.pixelProbability(img);
-            double H = CalculateEntropy.entropy(p);
-            System.out.printf("Imagen: %s -> Entropía total H(X): %.4f bits%n", imageName, H);
-
-        }
-    }
-
-    public void calculateConditionalEntropy() {
-
-        if (!isImagesUploaded) {
-            System.out.println("No hi ha imatges carregades a la memòria. No es pot processar.");
-            return;
-        }
-
-        for (Map.Entry<String, short[][][]> entry : Images.entrySet()) {
-            String imageName = entry.getKey();
-            short[][][] img = entry.getValue();
 
 
-            // 1. Calcular distribución conjunta P(l, r)
-            Map<String, Double> pJoint = CalculateProbability.jointProbability(img);
+        return image;
+    } //✅
 
-            // 2. Calcular marginal P(l)
-            Map<Short, Double> pLeft = CalculateProbability.marginalLeft(pJoint);
+    public void calculateImageEntropyTest() { //✅
 
-            // 3. Calcular entropía condicional H(R|L)
-            double Hcond = CalculateEntropy.conditionalEntropy(pJoint, pLeft);
+        image = readImage();
+        double H = Entropy.imageEntropy(image);
+        System.out.printf("Imagen: %s -> Entropía total H(X): %.4f bits%n", image.name, H);
 
-            // 4. Mostrar resultados
-            System.out.printf("Imagen: %s -> Entropía condicional H(R|L): %.4f bits%n", imageName, Hcond);
-        }
-    }
+    } //✅
 
-    public void imageQuantitzation(int q) {
+    public void calculateConditionalEntropyTest() {
 
+        image = readImage();
 
+        double Hcond = Entropy.conditionalEntropy(image);
 
-        if (!outputFolder.exists()) {
-            // Utilitzem mkdirs() per crear la carpeta i tots els seus pares si cal.
-            boolean created = outputFolder.mkdirs();
+        System.out.printf("Imagen: %s -> Entropía condicional H(R|L): %.4f bits%n", image.name, Hcond);
 
-            if (created) {
-                System.out.println("Directori "+ outputFolder + " creat amb èxit.");
-            }
-        }
+    } //✅
 
-        if (!isImagesUploaded) {
-            System.out.println("No hi ha imatges carregades a la memòria. No es pot processar.");
-            return;
-        }
+    public void calculateConditionalEntropy4PixelsTest() {
 
-        QuantitzationProcess.quanticiseRoundingAll(this.Images,q, outputFolder);
+        image = readImage();
 
-    }
+        // 1. Calcular distribución conjunta P(l, r)
+        //Probabilidad condicionada del píxel vecino en sus 4 cardinalidades
+        Map<String, Double> pJoint = Probability.jointProbability4(image.img);
 
-    public void deQuantitzation(int q) {
+        // 2. Calcular marginal P(l)
+        Map<Integer, Double> pLeft = Probability.marginalLeft(pJoint);
 
-        File[] files = inputFolder.listFiles((dir, name) ->
-                name.toLowerCase().startsWith("q") && name.toLowerCase().endsWith(".raw")
-        );
+        // 3. Calcular entropía condicional H(R|L)
+        double Hcond = Entropy.conditionalEntropy(pJoint, pLeft);
 
+        // 4. Mostrar resultados
+        System.out.printf("Imagen: %s -> Entropía condicional 4 cardinalitats H(R|L): %.4f bits%n", image.name, Hcond);
 
-        if (files == null) {
-            System.out.println("No s'han trobat fitxers de Qauntització RAW a " + inputFolder.getAbsolutePath());
-            return;
+    } //✅
+
+    public void imageQuantitzationTest(int q) {
+
+        image = readImage();
+
+        Quantitzation quantitzation = Quantitzation.init(q);
+        quantitzation.quanticiseDeadZone(image);
+        System.out.println("Image " + image.name + " reduced.");
+
+        image.name = "Q_" + q + "_" + image.name;
+
+        writeResult(image);
+
+    } //✅
+
+    public void deQuantitzationTest() {
+
+        image = readImage();
+
+        int q = 0;
+
+        try {
+            q = Utils.readQuantization(image.name);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
 
+        Quantitzation quantitzation = Quantitzation.init(q);
+        quantitzation.dequanticiseDeadZone(image);
 
+        image.name = "de" + image.name;
+        writeResult(image);
 
-        // 2. Comprovar si el directori existeix. Si no existeix, intentar crear-lo.
-        if (!outputFolder.exists()) {
-            // Utilitzem mkdirs() per crear la carpeta i tots els seus pares si cal.
-            boolean created = outputFolder.mkdirs();
+    } //✅
 
-            if (created) {
-                System.out.println("Directori creat amb èxit.");
-            }
-        }
+    public void predictionTest() {
 
-        QuantitzationProcess.deQuanticiseRoundingAll(q, inputFolder, outputFolder);
-
-    }
-    public void prediction() {
-
-;
-
-        // Assegurar la creació de la carpeta de sortida (obligatori ara que escrivim)
-        if (!outputFolder.exists()) {
-            outputFolder.mkdirs();
-        }
-
-        File[] files = inputFolder.listFiles((dir, name) ->
-                name.toLowerCase().startsWith("q") && name.toLowerCase().endsWith(".raw")
-        );
-
-        if (files == null || files.length == 0) {
-            System.out.println("⚠️ ATENCIÓ: No s'han trobat fitxers quantitzats (Q*.raw) a la carpeta: " + inputFolder.getName());
-            return;
-        }
+        image = readImage();
 
         PredictorDPCM predictor = new PredictorDPCM();
 
-        for (File file : files) {
-            String fileName = file.getName();
+        // 1. Aplicar la predicció: el resultat és la matriu de RESIDUS
+        predictor.aplicarPrediccioPixelAnterior(image);
+        image.name = "predicted_" + image.name;
+        double H = Entropy.imageEntropy(image);
+        System.out.printf("Imagen: %s -> Entropía total H(X): %.4f bits%n", image.name, H);
 
-            try {
-                RawImageConfig config = parseConfigFromFilename(fileName);
-                short[][][] imgDades = RawImageReader.readRaw(file.getAbsolutePath(), config);
+    } //✅
 
-                // 1. Aplicar la predicció: el resultat és la matriu de RESIDUS (int[][][])
-                int[][][] residuDades = predictor.aplicarPrediccio(imgDades);
-
-                // 2. Generar el nom del fitxer de sortida (.txt)
-                String baseName = fileName.replace(".raw", "").replace(".RAW", "");
-                String txtOutputName = "PREDICCIÓ_" + baseName + ".txt";
-
-                // 3. Obtenir la ruta completa del fitxer de sortida
-                String fullOutputPath = new File(inputFolder, txtOutputName).getAbsolutePath();
-
-                // 4. GUARDAR la matriu de residus al fitxer de text
-                printMatrixToFile(residuDades, fullOutputPath, "Residus DPCM per a la imatge: " + fileName);
-
-            } catch (Exception e) {
-                System.err.println("Error processant predicció per a: " + fileName);
-                e.printStackTrace();
-            }
-        }
-        System.out.println("\n✅ Procés de Predicció DPCM finalitzat.");
-    }
-
-    public void deprediction() {
-
-
-        // Assegurar la creació de la carpeta de sortida (obligatori ara que escrivim)
-        if (!outputFolder.exists()) {
-            outputFolder.mkdirs();
-        }
-
-        File[] files = inputFolder.listFiles((dir, name) ->
-                name.toLowerCase().startsWith("q") && name.toLowerCase().endsWith(".raw")
-        );
-
-        if (files == null || files.length == 0) {
-            System.out.println("⚠️ ATENCIÓ: No s'han trobat fitxers quantitzats (Q*.raw) a la carpeta: " + inputFolder.getName());
-            return;
-        }
+    public void depredictionTest() {
 
         PredictorDPCM predictor = new PredictorDPCM();
+        Image image = readImage();
 
-        for (File file : files) {
-            String fileName = file.getName();
+        predictor.aplicarPrediccioPixelAnterior(image);
+        predictor.desferPrediccioPixelAnterior(image);
 
-            try {
-                RawImageConfig config = parseConfigFromFilename(fileName);
-                short[][][] imgDades = RawImageReader.readRaw(file.getAbsolutePath(), config);
+        image.name = "depredicted_" + image.name;
+        double H = Entropy.imageEntropy(image);
+        System.out.printf("Imagen: %s -> Entropía total H(X): %.4f bits%n", image.name, H);
 
-                // 1. Aplicar la predicció: el resultat és la matriu de RESIDUS (int[][][])
-                int[][][] residuDades = predictor.aplicarPrediccio(imgDades);
+    } //✅
 
-                // 2. Generar el nom del fitxer de sortida (.txt)
-                String baseName = fileName.replace(".raw", "").replace(".RAW", "");
-                String txtOutputName = "PREDICCIÓ_" + baseName + ".txt";
-
-                // 3. Obtenir la ruta completa del fitxer de sortida
-                String fullOutputPath = new File(outputFolder, txtOutputName).getAbsolutePath();
-
-
-                short[][][] desprediccio = predictor.reconstruirDades(residuDades);
-
-                double mse= calculatePeakAbsoluteError(imgDades,desprediccio);
-                System.out.print("mea de la imatge "  +fileName+": " +mse +"\n");
-
-            } catch (Exception e) {
-                System.err.println("Error processant predicció per a: " + fileName);
-                e.printStackTrace();
-            }
-        }
-        System.out.println("\n✅ Procés de Predicció DPCM finalitzat.");
-    }
-
-    public void calculateDistortionMetrics(String originalPath, String reconstructedPath) {
+    public void compressImage() {
 
 
     }
 
-    public void coder() {
-        if (this.Images.isEmpty()) {
-            System.out.println("❌ No hi ha imatges carregades per codificar.");
-            return;
-        }
-
-        File compressedDir = new File(outputFolder, "compressed");
-        if (!compressedDir.exists()) compressedDir.mkdirs();
-
-        int qVal = QuantitzationProcess.Q_STEP;
-
-        for (Map.Entry<String, short[][][]> entry : Images.entrySet()) {
-            String imageName = entry.getKey();
-            short[][][] imgOriginal = entry.getValue();
-
-            System.out.println("\n🚀 Codificant: " + imageName + " (Q=" + qVal + ")");
-
-            try {
-                RawImageConfig config = parseConfigFromFilename(imageName);
-
-                // 0. Deep Copy
-                short[][][] imgToProcess = deepCopy(imgOriginal);
-
-                // 1. Quantització
-                short[][][] imgQuantized = QuantitzationProcess.quantisize(imgToProcess);
-
-                // 2. Predicció
-                PredictorDPCM predictor = new PredictorDPCM();
-                int[][][] imgPredicted = predictor.aplicarPrediccio(imgQuantized);
-
-                // 3. Aplanar i Histograma
-                java.util.List<Integer> symbols = new java.util.ArrayList<>();
-
-                int maxSymbols = 131072; //rang short
-
-                // CORRECCIÓ: Ara fem servir int[] per comptar, no short[]
-                int[] freqHistogram = new int[maxSymbols];
-
-                int bands = imgPredicted.length;
-                int height = imgPredicted[0].length;
-                int width = imgPredicted[0][0].length;
-
-                for (int b = 0; b < bands; b++) {
-                    for (int y = 0; y < height; y++) {
-                        for (int x = 0; x < width; x++) {
-                            int val = imgPredicted[b][y][x];
-                            symbols.add(val);
-
-                            // Comptem freqüència sense por al desbordament
-                            if (val >= 0 && val < maxSymbols) {
-                                freqHistogram[val]++;
-                            }
-                        }
-                    }
-                }
-
-                // 4. Codificació Aritmètica
-                java.util.List<Integer> cumFreq = ArithmeticCoder.computeCumFreq(symbols);
-                BitWriter bw = new BitWriter();
-                ArithmeticCoder coder = new ArithmeticCoder();
-
-                for (int symbol : symbols) {
-                    coder.encodeSymbol(symbol, cumFreq, bw);
-                }
-                coder.finish(bw);
-
-                // 5. Guardar .ac
-                String compressedName = "Compressed_" + imageName.replace(".raw", ".ac");
-                File fileOut = new File(compressedDir, compressedName);
-
-                // Ara passem l'int[] correctament
-                config.setCompressionHeaderData(qVal, freqHistogram);
-
-                try (java.io.DataOutputStream dos = new java.io.DataOutputStream(
-                        new java.io.BufferedOutputStream(new java.io.FileOutputStream(fileOut)))) {
-
-                    // Escriu Header (freqüències com INTs)
-                    config.writeHeader(dos);
-
-                    // Escriu Bits
-                    dos.write(bw.getBuffer());
-
-                    long originalSize = bands * height * width * 2L;
-                    long compressedSize = fileOut.length();
-                    double ratio = (double) originalSize / compressedSize;
-
-                    System.out.println("   💾 Guardat: " + fileOut.getName());
-                    System.out.println("   📦 Mida: " + compressedSize + " bytes");
-                    System.out.printf("   📉 Rati: %.2f : 1%n", ratio);
-                }
-
-                // 6. Verificació...
-                short[][][] imgReconstructed = predictor.reconstruirDades(imgPredicted);
-                short[][][] imgFinal = QuantitzationProcess.dequantisize(imgReconstructed);
-                int pae = DistorsionMetrics.calculatePeakAbsoluteError(imgOriginal, imgFinal);
-                double mse = DistorsionMetrics.calculateMSE(imgOriginal, imgFinal);
-                System.out.printf("   ✅ MSE: %.4f | PAE: %d%n", mse, pae);
-
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-    }
+    /*
 
     public void decoder() {
         // Asumimos que los archivos comprimidos están en la carpeta 'compressed' dentro del input o output configurado
@@ -416,7 +173,7 @@ public class ImageProcessor {
 
                 // 1. LEER HEADER
                 // Recuperamos dimensiones, Q y el histograma original
-                RawImageConfig config = RawImageConfig.readHeader(dis);
+                Image config = Image.readHeader(dis);
 
                 // 2. RECONSTRUIR FRECUENCIAS ACUMULADAS
                 // Convertimos el histograma int[] a la lista acumulada que necesita el ArithmeticCoder
@@ -512,12 +269,12 @@ public class ImageProcessor {
             if (originalImg != null) {
                 try {
                     // Leemos la imagen descodificada del disco
-                    RawImageConfig config = parseConfigFromFilename(decodedName);
+                    Image config = parseConfigFromFilename(decodedName);
                     short[][][] decodedImg = RawImageReader.readRaw(file.getAbsolutePath(), config);
 
                     // Calculamos métricas
                     double mse = DistorsionMetrics.calculateMSE(originalImg, decodedImg);
-                    int pae = DistorsionMetrics.calculatePeakAbsoluteError(originalImg, decodedImg);
+                    int pae = calculatePeakAbsoluteError(originalImg, decodedImg);
 
                     System.out.println("🔹 Imagen: " + originalName);
                     System.out.printf("   MSE: %.4f\n", mse);
@@ -547,4 +304,6 @@ public class ImageProcessor {
         return dest;
     }
 
+
+ */
 }

@@ -1,10 +1,9 @@
 package io;
 
-import config.RawImageConfig;
+import image.Image;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
-import java.awt.image.WritableRaster;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -12,48 +11,59 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
 public class RawImageWriter {
-    public static void write(BufferedImage image, String format, String outputPath) throws IOException {
-        File outputFile = new File(outputPath);
-        ImageIO.write(image, format, outputFile);
-    }
 
-    public static void writeRaw(String path, short[][][] matrix, RawImageConfig config) throws IOException {
+    public static void writeRaw(Image image) throws IOException {
 
+        String path = new File(image.imagePath, image.name).getPath();
 
-        try (FileOutputStream fos = new FileOutputStream(path)) {
-            // Si los datos son de 8 bits, cada muestra ocupa 1 byte
-            int bytesPerSample = (config.bitsPerSample == 8) ? 1 : 2; // por si luego usas 32 bits
+        path = path.startsWith("/") ? path.substring(1) : path;
+        File file = new File(path).getAbsoluteFile();
 
-            // Tamaño total del buffer
-            int totalSize = config.width * config.height * config.bands * bytesPerSample;
+        // 1) Create parent directory if it doesn't exist
+        File parent = file.getParentFile();
+        if (parent != null && !parent.exists()) {
+            if (!parent.mkdirs()) {
+                throw new IOException("Cannot create directory: " + parent.getAbsolutePath());
+            }
+        }
+
+        // 2) Create file if it does not exist
+        if (!file.exists()) {
+            if (!file.createNewFile()) {
+                throw new IOException("Cannot create file: " + file.getAbsolutePath());
+            }
+        }
+
+        // 3) Now safely write to it
+        try (FileOutputStream fos = new FileOutputStream(file)) {
+
+            int bytesPerSample = (image.bitsPerSample == 8) ? 1 : 2;
+            int totalSize = image.width * image.height * image.bands * bytesPerSample;
+
             ByteBuffer bufferOut = ByteBuffer.allocate(totalSize);
-            bufferOut.order(config.bigEndian ? ByteOrder.BIG_ENDIAN : ByteOrder.LITTLE_ENDIAN);
+            bufferOut.order(image.bigEndian ? ByteOrder.BIG_ENDIAN : ByteOrder.LITTLE_ENDIAN);
 
-            // Escribimos los datos según la profundidad de bits
-            for (int b = 0; b < config.bands; b++) {
-                for (int y = 0; y < config.height; y++) {
-                    for (int x = 0; x < config.width; x++) {
+            for (int b = 0; b < image.bands; b++) {
+                for (int y = 0; y < image.height; y++) {
+                    for (int x = 0; x < image.width; x++) {
 
-                        if (config.bitsPerSample == 8) {
-                            // Si los valores están en 0–255
-                            int value = matrix[b][y][x];
+                        if (image.bitsPerSample == 8) {
+                            int value = image.img[b][y][x];
                             bufferOut.put((byte) (value & 0xFF));
-                        } else if (config.bitsPerSample == 16) {
-                            // Si son flotantes o ints de 32 bits
-                            bufferOut.putShort(matrix[b][y][x]);
+
+                        } else if (image.bitsPerSample == 16) {
+                            bufferOut.putShort((short) image.img[b][y][x]);
+
                         } else {
-                            throw new IllegalArgumentException("bitsPerSample no soportado: " + config.bitsPerSample);
+                            throw new IllegalArgumentException("bitsPerSample no soportado: " + image.bitsPerSample);
                         }
                     }
                 }
             }
 
-            // Escribimos al archivo
             fos.write(bufferOut.array());
-
-        } catch (IOException e) {
-            e.printStackTrace();
         }
+    } //✅
 
-    }
+    public static void writeCompressedImage(String path, Image image) throws IOException {}
 }
