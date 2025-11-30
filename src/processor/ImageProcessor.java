@@ -5,10 +5,14 @@ import stages.PredictorDPCM;
 import stages.Quantitzation;
 import utils.*;
 
+import java.io.BufferedInputStream;
+import java.io.DataInputStream;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
+import static io.InputImageReader.readAC;
 import static utils.Utils.*;
 
 public class ImageProcessor {
@@ -137,6 +141,7 @@ public class ImageProcessor {
             Quantitzation quantitzator = new Quantitzation();
             ArithmeticCoder arithmeticCoder = new ArithmeticCoder();
             Image image = readImage();
+            BitWriter bw = new BitWriter();
 
             // 1. Decorrelació DPCM
             predictor.aplicarPrediccioPixelAnterior(image);
@@ -146,107 +151,68 @@ public class ImageProcessor {
 
 
             // 4. Codificació Aritmètica
-            arithmeticCoder.encodeImage(image);
+            arithmeticCoder.encodeImage(image, bw);
 
 
             // 5. Escribim el fitxer comprimit
             System.out.println("Imatge " + image.name + " compressed.");
-            image.name = image.name.replace(".raw", ".ac");
-            writeCompressedImage(image);
+            writeCompressedImage(image, bw);
     }
-
-
-/*
 
     public void decoder() {
-        // Asumimos que los archivos comprimidos están en la carpeta 'compressed' dentro del input o output configurado
-        // Ajusta esta ruta si tu ChooseOperation define el inputFolder directamente como la carpeta de comprimidos.
-        File compressedDir = new File(inputFolder.getAbsolutePath());
 
-        // Si no encuentra .ac en la raíz, busca en /compressed (por compatibilidad con la estructura anterior)
-        if (compressedDir.listFiles((dir, name) -> name.toLowerCase().endsWith(".ac")).length == 0) {
-            File subDir = new File(inputFolder, "compressed");
-            if (subDir.exists()) compressedDir = subDir;
-        }
+        PredictorDPCM predictor = new PredictorDPCM();
+        Quantitzation quantitzator = new Quantitzation();
+        ArithmeticCoder arithmeticCoder = new ArithmeticCoder();
 
-        File decodedDir = new File(outputFolder, "decoded");
-        if (!decodedDir.exists()) decodedDir.mkdirs();
+        Image image = new Image(this.inputImage);
+        BitReader br = new BitReader(readAC(image)); //Leemos el archivo comprimido extrayendo el header y los bytes
 
-        File[] files = compressedDir.listFiles((dir, name) -> name.toLowerCase().endsWith(".ac"));
-        if (files == null || files.length == 0) {
-            System.out.println("⚠️ No se han encontrado archivos comprimidos (.ac) en: " + compressedDir.getAbsolutePath());
-            return;
-        }
 
-        for (File file : files) {
-            String fileName = file.getName();
-            System.out.println("\n🔓 Descodificando: " + fileName);
+        // Inicializamos el decodificador aritmético
+        arithmeticCoder.initializeDecoder(br);
 
-            try (DataInputStream dis = new DataInputStream(new BufferedInputStream(new FileInputStream(file)))) {
 
-                // 1. LEER HEADER
-                // Recuperamos dimensiones, Q y el histograma original
-                Image config = Image.readHeader(dis);
+            // 4. DECODIFICAR SÍMBOLOS
+            image.img = new int[image.bands][image.height][image.width];
 
-                // 2. RECONSTRUIR FRECUENCIAS ACUMULADAS
-                // Convertimos el histograma int[] a la lista acumulada que necesita el ArithmeticCoder
-                List<Integer> cumFreq = new ArrayList<>();
-                int currentSum = 0;
-                cumFreq.add(0); // El inicio siempre es 0
-
-                for (int freq : config.frequencies) {
-                    currentSum += freq;
-                    cumFreq.add(currentSum);
-                }
-
-                // 3. LEER BITSTREAM (El resto del archivo)
-                byte[] compressedBytes = dis.readAllBytes();
-
-                BitReader br = new BitReader(compressedBytes);
-                ArithmeticCoder decoder = new ArithmeticCoder();
-                decoder.initializeDecoder(br);
-
-                // 4. DECODIFICAR SÍMBOLOS
-                int[][][] imgPredicted = new int[config.bands][config.height][config.width];
-
-                for (int b = 0; b < config.bands; b++) {
-                    for (int y = 0; y < config.height; y++) {
-                        for (int x = 0; x < config.width; x++) {
-                            // Decodificamos un símbolo usando la tabla de frecuencias reconstruida
-                            int symbol = decoder.decodeSymbol(cumFreq, br);
-                            imgPredicted[b][y][x] = symbol;
-                        }
+            for (int b = 0; b < image.bands; b++) {
+                for (int y = 0; y < image.height; y++) {
+                    for (int x = 0; x < image.width; x++) {
+                        // Decodificamos un símbolo usando la tabla de frecuencias reconstruida
+                        int symbol = arithmeticCoder.decodeSymbol(image.frequencies, br);
+                        imgPredicted[b][y][x] = symbol;
                     }
                 }
-
-                // 5. DESPREDICCIÓN (Inverso DPCM + ZigZag)
-                PredictorDPCM predictor = new PredictorDPCM();
-                short[][][] imgReconstructed = predictor.reconstruirDades(imgPredicted);
-
-                // 6. DESCUANTIZACIÓN
-                // Usamos la lógica de descuantización.
-                // Nota: Tu implementación actual de 'quantisize' guarda los valores ya multiplicados por Q (aproximados),
-                // por lo que 'dequantisize' principalmente hace clamping.
-                short[][][] imgFinal = QuantitzationProcess.dequantisize(imgReconstructed);
-
-                // 7. GUARDAR IMAGEN RECONSTRUIDA
-                String outputName = "Decoded_" + fileName.replace(".ac", ".raw");
-                String fullOutputPath = new File(decodedDir, outputName).getAbsolutePath();
-
-                RawImageWriter.writeRaw(fullOutputPath, imgFinal, config);
-
-                System.out.println("   💾 Imagen Recuperada: " + outputName);
-                System.out.println("   ⚙️ Parámetros recuperados: " + config.width + "x" + config.height + " Q=" + config.qStep);
-
-
-            } catch (Exception e) {
-                System.err.println("❌ Error fatal descodificando: " + fileName);
-                e.printStackTrace();
             }
+
+            // 5. DESPREDICCIÓN (Inverso DPCM + ZigZag)
+            PredictorDPCM predictor = new PredictorDPCM();
+            short[][][] imgReconstructed = predictor.reconstruirDades(imgPredicted);
+
+            // 6. DESCUANTIZACIÓN
+            // Usamos la lógica de descuantización.
+            // Nota: Tu implementación actual de 'quantisize' guarda los valores ya multiplicados por Q (aproximados),
+            // por lo que 'dequantisize' principalmente hace clamping.
+            short[][][] imgFinal = QuantitzationProcess.dequantisize(imgReconstructed);
+
+            // 7. GUARDAR IMAGEN RECONSTRUIDA
+            String outputName = "Decoded_" + fileName.replace(".ac", ".raw");
+            String fullOutputPath = new File(decodedDir, outputName).getAbsolutePath();
+
+            RawImageWriter.writeRaw(fullOutputPath, imgFinal, config);
+
+            System.out.println("   💾 Imagen Recuperada: " + outputName);
+            System.out.println("   ⚙️ Parámetros recuperados: " + config.width + "x" + config.height + " Q=" + config.qStep);
+
+
+        } catch (Exception e) {
+            System.err.println("❌ Error fatal descodificando: " + fileName);
+            e.printStackTrace();
         }
-        System.out.println("✅ Proceso de Descodificación Finalizado.");
     }
 
+    /*
     public void compareOriginalWithDecoded() {
         if (this.Images.isEmpty()) {
             System.out.println("⚠️ No hay imágenes originales cargadas en memoria.");

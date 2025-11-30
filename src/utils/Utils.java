@@ -42,9 +42,9 @@ public class Utils {
         }
     }
 
-    public static void writeCompressedImage(Image image) {
+    public static void writeCompressedImage(Image image, BitWriter bw) {
         try {
-            OutputImageWriter.writeCompressedImage(image);
+            OutputImageWriter.writeCompressedImage(image, bw);
 
         } catch (Exception e) {
             System.err.println("Error processant: " + image.name);

@@ -150,8 +150,7 @@ public class ArithmeticCoder {
         return cum;
     }
 
-    public void encodeImage(Image image) {
-        BitWriter bw = new BitWriter();
+    public void encodeImage(Image image, BitWriter bw) {
 
         // Extraiem els símbols de la imatge
         java.util.List<Integer> symbols = getIntegers(image);
@@ -162,7 +161,7 @@ public class ArithmeticCoder {
         // Calculem les freqüències acumulades
         java.util.List<Integer> cumFreq = ArithmeticCoder.computeCumFreq(normalized);
 
-        for (int symbol : symbols) {
+        for (int symbol : normalized) {
             encodeSymbol(symbol, cumFreq, bw);
         }
         finish(bw);
@@ -193,14 +192,24 @@ public class ArithmeticCoder {
 
         int maxSymbols = 131072;
 
+        int[] freqHistogram = new int[maxSymbols];
+
         for (int b = 0; b < image.bands; b++) {
             for (int y = 0; y < image.height; y++) {
                 for (int x = 0; x < image.width; x++) {
                     int val = image.img[b][y][x];
                     symbols.add(val);
+
+                    // Comptem freqüència sense por al desbordament
+                    if (val >= 0 && val < maxSymbols) {
+                        freqHistogram[val]++;
+                    }
                 }
             }
         }
+
+        image.setCompressionHeaderData(Quantitzation.Q_STEP, freqHistogram); // Con el qstep default
+
         return symbols;
     }
 }

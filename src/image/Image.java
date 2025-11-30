@@ -2,6 +2,7 @@ package image;
 
 import io.InputImageReader;
 
+import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.IOException;
@@ -57,6 +58,10 @@ public class Image {
         }
     } //✅
 
+    public Image(String inputImage){
+        this.imagePath = (inputImage != null) ? new File(inputImage).getParent() : null;
+    }
+
     public void printInfo() {
         System.out.println("Image Info:");
         System.out.println("Width: " + width);
@@ -70,7 +75,7 @@ public class Image {
     public void setCompressionHeaderData(int qStep, int[] frequencies) {
         this.qStep = qStep;
         this.frequencies = frequencies;
-    }
+    } //✅
 
     public void writeHeader(DataOutputStream dos) throws IOException {
         dos.writeInt(width);
@@ -94,31 +99,22 @@ public class Image {
         }
     }
 
-    /*
-    public static Image readHeader(DataInputStream dis) throws IOException {
-        int width = dis.readInt();
-        int height = dis.readInt();
-        int bands = dis.readInt();
-        int bitsPerSample = dis.readInt();
-        boolean signed = dis.readBoolean();
-        boolean bigEndian = dis.readBoolean();
+    public void readHeader(DataInputStream dis) throws IOException {
+        this.width = dis.readInt();
+        this.height = dis.readInt();
+        this.bands = dis.readInt();
+        this.bitsPerSample = dis.readInt();
+        this.signed = dis.readBoolean();
+        this.bigEndian = dis.readBoolean();
+        this.qStep = dis.readInt();
 
-        Image config = new Image(width, height, bands, bitsPerSample, signed, bigEndian);
-
-        config.qStep = dis.readInt();
-
-        // --- CORRECCIÓ CRÍTICA ---
-        // Fem servir readInt (4 bytes)
         int freqLength = dis.readInt();
         if (freqLength > 0) {
-            config.frequencies = new int[freqLength];
+            this.frequencies = new int[freqLength];
             for (int i = 0; i < freqLength; i++) {
-                config.frequencies[i] = dis.readInt(); // readInt, NO readShort
+                this.frequencies[i] = dis.readInt();
             }
         }
-
-        return config;
     }
 
-     */
 }

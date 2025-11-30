@@ -1,6 +1,7 @@
 package io;
 
 import image.Image;
+import utils.BitWriter;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -63,7 +64,19 @@ public class OutputImageWriter {
         }
     } //✅
 
-    public static void writeCompressedImage(Image image) throws IOException {
+    public static void writeCompressedImage(Image image, BitWriter bw) throws IOException {
 
-    }
+        image.name = image.name.replace(".raw", ".ac");
+        String path = new File(image.imagePath, image.name).getPath();
+        try (java.io.DataOutputStream dos = new java.io.DataOutputStream(
+                new java.io.BufferedOutputStream(new java.io.FileOutputStream(path)))) {
+
+            // Escriu Header (freqüències com INTs)
+            image.writeHeader(dos);
+
+            // Escriu Bits
+            dos.write(bw.getBuffer());
+
+        }
+    } //✅
 }
