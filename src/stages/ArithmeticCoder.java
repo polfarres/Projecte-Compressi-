@@ -19,6 +19,7 @@ public class ArithmeticCoder {
     private static final int SYMBOL_BITS = 17;
     private static final int SYMBOLS = 1 << SYMBOL_BITS; // 131072
 
+    private int offset = 32767;
     private int low = 0;
     private int high = 0xFFFFFFFF;
     private int underflow = 0;
@@ -152,19 +153,39 @@ public class ArithmeticCoder {
     public void encodeImage(Image image) {
         BitWriter bw = new BitWriter();
 
-        // Normalizamos la imagen (para que no tenga negativos si es signed)
-
-
         // Extraiem els símbols de la imatge
-        List<Integer> symbols = getIntegers(image);
+        java.util.List<Integer> symbols = getIntegers(image);
 
-        // Calculem la taula de freqüències acumulades
-        java.util.List<Integer> cumFreq = ArithmeticCoder.computeCumFreq(symbols);
+        // Normalizamos la imagen (para que no tenga negativos si es signed)
+        java.util.List<Integer> normalized = normalizeSymbols(symbols);
+
+        // Calculem les freqüències acumulades
+        java.util.List<Integer> cumFreq = ArithmeticCoder.computeCumFreq(normalized);
 
         for (int symbol : symbols) {
             encodeSymbol(symbol, cumFreq, bw);
         }
         finish(bw);
+    }
+
+    private List<Integer> normalizeSymbols(List<Integer> symbols) {
+
+        List<Integer> normalized = new ArrayList<>();
+
+        for (Integer symbol : symbols) {
+            normalized.add(symbol + offset);
+        }
+        return normalized;
+    }
+
+    private List<Integer> deNormalizeSymbols(List<Integer> symbols) {
+
+        List<Integer> deNormalized = new ArrayList<>();
+
+        for (Integer symbol : symbols) {
+            deNormalized.add(symbol - offset);
+        }
+        return deNormalized;
     }
 
     private static List<Integer> getIntegers(Image image) {
