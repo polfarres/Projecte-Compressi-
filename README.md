@@ -121,6 +121,10 @@ Image Compression Project
 * [x] Entropy of the dequantized (lossy) image
 * [x] Prediction
 * [x] Pipeline
+* [x] Coder and decoder done
+* [x] User interface improoved
+* [x] Code refactored
+* [ ] Distortion metrics (MSE and PAE)
 
 We are currently focusing on the first **three stages** of image compression:
 **Entropy**, **Quantization**, and **Prediction**.
