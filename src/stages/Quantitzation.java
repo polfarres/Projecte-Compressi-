@@ -4,7 +4,7 @@ import image.Image;
 
 public class Quantitzation {
 
-        public static int Q_STEP = 5;
+        public static int Q_STEP = 10; // Valor per defecte
 
         public static Quantitzation init(int qStep) {
             if (qStep <= 0) throw new IllegalArgumentException("qStep must be > 0");

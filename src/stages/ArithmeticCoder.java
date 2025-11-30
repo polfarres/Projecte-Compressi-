@@ -7,27 +7,16 @@ import utils.BitWriter;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Traducció del codificador/decodificador aritmètic de C++ a Java (IAC).
- * Utilitza int (32 bits) per low, high, code i long (64 bits) per range i càlculs.
- */
 public class ArithmeticCoder {
 
-    // Configurem 17 bits per seguretat (suporta tot el rang de short: -32768 a 32767).
-    // Si només tens dades de 8 bits (-255 a 255), funcionara igualment sense problemes,
-    // simplement la taula de freqüències serà més gran del necessari (sense impacte real).
     private static final int SYMBOL_BITS = 17;
-    private static final int SYMBOLS = 1 << SYMBOL_BITS; // 131072
+    private static final int SYMBOLS = 1 << SYMBOL_BITS;
 
     private int offset = 32767;
     private int low = 0;
     private int high = 0xFFFFFFFF;
     private int underflow = 0;
     private int code = 0;
-
-    // =======================================================================
-    // ENCODER
-    // =======================================================================
 
     public void encodeSymbol(int symbol, List<Integer> cumFreq, BitWriter bw) {
         long range = (long) (high & 0xFFFFFFFFL) - (low & 0xFFFFFFFFL) + 1;
@@ -39,7 +28,6 @@ public class ArithmeticCoder {
         high = (int) ((low & 0xFFFFFFFFL) + (range * cumSymbolPlus1) / totalFreq - 1);
         low = (int) ((low & 0xFFFFFFFFL) + (range * cumSymbol) / totalFreq);
 
-        // Renormalització
         while (true) {
             if (((high & 0x80000000) == (low & 0x80000000))) {
                 int bit = (high >>> 31) & 1;
@@ -49,7 +37,6 @@ public class ArithmeticCoder {
                     underflow--;
                 }
                 low <<= 1; high <<= 1; high |= 1;
-
             } else if (((low & 0x40000000) != 0) && ((high & 0x40000000) == 0)) {
                 underflow++;
                 low &= 0x3FFFFFFF;
@@ -73,16 +60,13 @@ public class ArithmeticCoder {
         bw.flush();
     }
 
-    // =======================================================================
-    // DECODER
-    // =======================================================================
-
     public void initializeDecoder(BitReader br) {
         this.low = 0;
         this.high = 0xFFFFFFFF;
         this.code = 0;
         for (int i = 0; i < 32; i++) {
-            code = (code << 1) | br.readBit();
+            int b = br.readBit();
+            code = (code << 1) | (b & 1);
         }
     }
 
@@ -92,7 +76,6 @@ public class ArithmeticCoder {
 
         long value = (((code & 0xFFFFFFFFL) - (low & 0xFFFFFFFFL) + 1) * totalFreq - 1) / range;
 
-        // Cerca binària
         int symbol;
         int left = 0, right = SYMBOLS;
         while (left < right - 1) {
@@ -108,17 +91,17 @@ public class ArithmeticCoder {
         high = (int) ((low & 0xFFFFFFFFL) + (range * cumSymbolPlus1) / totalFreq - 1);
         low = (int) ((low & 0xFFFFFFFFL) + (range * cumSymbol) / totalFreq);
 
-        // Renormalització
         while (true) {
             if (((high & 0x80000000) == (low & 0x80000000))) {
                 low <<= 1; high <<= 1; high |= 1;
-                code = (code << 1) | br.readBit();
-
+                int b = br.readBit();
+                code = ((code << 1) | (b & 1));
             } else if (((low & 0x40000000) != 0) && ((high & 0x40000000) == 0)) {
                 low &= 0x3FFFFFFF;
                 high |= 0x40000000;
                 low <<= 1; high <<= 1; high |= 1;
-                code = ((code ^ 0x40000000) << 1) | br.readBit();
+                int b = br.readBit();
+                code = ((code ^ 0x40000000) << 1) | (b & 1);
             } else {
                 break;
             }
@@ -126,13 +109,9 @@ public class ArithmeticCoder {
         return symbol;
     }
 
-    // =======================================================================
-    // UTILS
-    // =======================================================================
-
     public static List<Integer> computeCumFreq(final List<Integer> data) {
         List<Integer> freq = new ArrayList<>(SYMBOLS);
-        for(int i = 0; i < SYMBOLS; i++) freq.add(0);
+        for (int i = 0; i < SYMBOLS; i++) freq.add(0);
 
         for (int s : data) {
             if (s >= 0 && s < SYMBOLS) {
@@ -151,65 +130,81 @@ public class ArithmeticCoder {
     }
 
     public void encodeImage(Image image, BitWriter bw) {
-
-        // Extraiem els símbols de la imatge
         java.util.List<Integer> symbols = getIntegers(image);
+        java.util.List<Integer> cumFreq = ArithmeticCoder.computeCumFreq(symbols);
 
-        // Normalizamos la imagen (para que no tenga negativos si es signed)
-        java.util.List<Integer> normalized = normalizeSymbols(symbols);
-
-        // Calculem les freqüències acumulades
-        java.util.List<Integer> cumFreq = ArithmeticCoder.computeCumFreq(normalized);
-
-        for (int symbol : normalized) {
+        for (int symbol : symbols) {
             encodeSymbol(symbol, cumFreq, bw);
         }
         finish(bw);
-    }
+    } //✅
 
-    private List<Integer> normalizeSymbols(List<Integer> symbols) {
+    public void DecodeImage(Image image, BitReader br) {
+        image.img = new int[image.bands][image.height][image.width];
 
-        List<Integer> normalized = new ArrayList<>();
+        List<Integer> cumFreq = new ArrayList<>();
+        int currentSum = 0;
+        cumFreq.add(0);
 
-        for (Integer symbol : symbols) {
-            normalized.add(symbol + offset);
+        for (int freq : image.frequencies) {
+            currentSum += freq;
+            cumFreq.add(currentSum);
         }
-        return normalized;
-    }
+
+        int[][][] imgPredicted = new int[image.bands][image.height][image.width];
+        java.util.List<Integer> symbols = new ArrayList<>();
+
+        for (int b = 0; b < image.bands; b++) {
+            for (int y = 0; y < image.height; y++) {
+                for (int x = 0; x < image.width; x++) {
+                    symbols.add(decodeSymbol(cumFreq, br));
+                }
+            }
+        }
+
+        List<Integer> deNormalized = deNormalizeSymbols(symbols);
+
+        for (int b = 0; b < image.bands; b++) {
+            for (int y = 0; y < image.height; y++) {
+                for (int x = 0; x < image.width; x++) {
+                    imgPredicted[b][y][x] = deNormalized.get(b * image.height * image.width + y * image.width + x);
+                }
+            }
+        }
+
+        image.img = imgPredicted;
+    } //✅
 
     private List<Integer> deNormalizeSymbols(List<Integer> symbols) {
-
         List<Integer> deNormalized = new ArrayList<>();
-
         for (Integer symbol : symbols) {
             deNormalized.add(symbol - offset);
         }
         return deNormalized;
-    }
+    } //✅
 
-    private static List<Integer> getIntegers(Image image) {
+    private List<Integer> getIntegers(Image image) {
         List<Integer> symbols = new ArrayList<>();
 
-        int maxSymbols = 131072;
-
+        int maxSymbols = SYMBOLS;
         int[] freqHistogram = new int[maxSymbols];
 
         for (int b = 0; b < image.bands; b++) {
             for (int y = 0; y < image.height; y++) {
                 for (int x = 0; x < image.width; x++) {
-                    int val = image.img[b][y][x];
+                    int raw = image.img[b][y][x];
+                    int val = raw + offset;        // Se normalizan los valores para tenerlos en positivo antes del Histograma
+
                     symbols.add(val);
 
-                    // Comptem freqüència sense por al desbordament
-                    if (val >= 0 && val < maxSymbols) {
+                    if (val >= 0 && val < maxSymbols)
                         freqHistogram[val]++;
-                    }
                 }
             }
         }
 
-        image.setCompressionHeaderData(Quantitzation.Q_STEP, freqHistogram); // Con el qstep default
-
+        image.setCompressionHeaderData(Quantitzation.Q_STEP, freqHistogram);
         return symbols;
-    }
+    } //✅
+
 }

@@ -13,7 +13,7 @@ public class OutputImageWriter {
 
     public static void writeRaw(Image image) throws IOException {
 
-        String path = new File(image.imagePath, image.name).getPath();
+        String path = new File(new File(image.imagePath).getParent(), image.name).getPath();
 
         path = path.startsWith("/") ? path.substring(1) : path;
         File file = new File(path).getAbsoluteFile();

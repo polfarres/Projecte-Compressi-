@@ -57,7 +57,7 @@ public class InputImageReader {
     } //✅
 
     public static byte[] readAC(Image image) {
-        try (DataInputStream dis = new DataInputStream(new BufferedInputStream(new FileInputStream(image.imagePath)))) {
+        try (DataInputStream dis = new DataInputStream(new BufferedInputStream(new FileInputStream(new File(image.imagePath).getAbsolutePath())))) {
 
             // 1. LEER HEADER
             // Recuperamos dimensiones, Q y el histograma original

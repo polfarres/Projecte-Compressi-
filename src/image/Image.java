@@ -59,7 +59,7 @@ public class Image {
     } //✅
 
     public Image(String inputImage){
-        this.imagePath = (inputImage != null) ? new File(inputImage).getParent() : null;
+        this.imagePath = (inputImage != null) ? new File(inputImage).getPath() : null;
     }
 
     public void printInfo() {
@@ -107,6 +107,7 @@ public class Image {
         this.signed = dis.readBoolean();
         this.bigEndian = dis.readBoolean();
         this.qStep = dis.readInt();
+        this.name = (new File(this.imagePath)).getName();
 
         int freqLength = dis.readInt();
         if (freqLength > 0) {

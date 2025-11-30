@@ -33,7 +33,7 @@ public class Utils {
         return Integer.parseInt(parts[1]); // El que correspon a la Q
     } //✅
 
-    public static void writeResult(Image image) {
+    public static void writeResult(Image image) { //✅
         try {
             OutputImageWriter.writeRaw(image);
 
@@ -42,7 +42,7 @@ public class Utils {
         }
     }
 
-    public static void writeCompressedImage(Image image, BitWriter bw) {
+    public static void writeCompressedImage(Image image, BitWriter bw) { //✅
         try {
             OutputImageWriter.writeCompressedImage(image, bw);
 

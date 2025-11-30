@@ -177,13 +177,8 @@ public class ChooseOperation {
                 System.out.println(TerminalUtils.MAGENTA + "DESCODIFICACIÓ COMPLETA (.ac -> RAW)" + TerminalUtils.RESET);
                 System.out.println("    -----------------------    ");
 
-                // INPUT: Fitxers comprimits (.ac)
-                //processor.setInputFolder(outputPath + "/imatges-codificades");
-                // OUTPUT: Imatges Descodificades (Decoded*.raw)
-                //processor.setOutputFolder(outputPath + "/imatges-decodificades");
-
                 spinner.start("Descodificant imatges...");
-                //processor.decoder();
+                imageProcessor.decoder();
                 spinner.stop();
                 break;
 
@@ -206,7 +201,7 @@ public class ChooseOperation {
     }
 
     public void setInputImage(){
-        System.out.println("Introdueix el path de la imatge d'entrada (raw): ");
+        System.out.println("Introdueix el path de la imatge d'entrada (raw o ac): ");
         String path = input.nextLine();
         imageProcessor.uploadImage(path);
     }
