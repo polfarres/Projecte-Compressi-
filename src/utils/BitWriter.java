@@ -45,4 +45,16 @@ public class BitWriter {
         }
         return result;
     }
+    public int getSize() {
+        return buffer.size();
+    }
+
+    public static double calculatePSNR(double mse, int bitsPerSample) {
+        if (mse == 0) return Double.POSITIVE_INFINITY;
+
+        // El valor màxim possible (255 per a 8 bits, 65535 per a 16 bits)
+        double maxPixelValue = Math.pow(2, bitsPerSample) - 1;
+
+        return 10 * Math.log10((maxPixelValue * maxPixelValue) / mse);
+    }
 }

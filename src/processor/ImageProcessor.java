@@ -27,18 +27,18 @@ public class ImageProcessor {
     public Image readImage() {
 
         Image image = null;
-            try {
-                assert this.inputImage != null;
-                image = parseConfigFromFilename(this.inputImage);
-                System.out.println();
-                System.out.println("Image " + image.name + " read with config: ");
-                image.printInfo();
-                System.out.println("Image " + image.name + " processed and written to memory.");
+        try {
+            assert this.inputImage != null;
+            image = parseConfigFromFilename(this.inputImage);
+            System.out.println();
+            System.out.println("Image " + image.name + " read with config: ");
+            image.printInfo();
+            System.out.println("Image " + image.name + " processed and written to memory.");
 
-            } catch (Exception e) {
-                System.err.println("Error processant: " + this.inputImage + "no s'ha pogut llegir.");
-                e.printStackTrace();
-            }
+        } catch (Exception e) {
+            System.err.println("Error processant: " + this.inputImage + "no s'ha pogut llegir.");
+            e.printStackTrace();
+        }
         return image;
     } //✅
 
@@ -191,5 +191,82 @@ public class ImageProcessor {
         image.name = "decoded_" + image.name.replace(".ac", ".raw");
         writeResult(image);
 
-        } //✅
+    } //✅
+
+
+    public void generateCurvesData() {
+        // 1. Verificar que tenemos una imagen seleccionada
+        if (this.inputImage == null) {
+            System.out.println("❌ Error: No hay ninguna imagen seleccionada (inputImage es null).");
+            return;
+        }
+
+        // 2. Cargar la imagen ORIGINAL (Referencia para calidad perfecta)
+        System.out.println("Cargando imagen original de referencia...");
+        Image originalImage = readImage();
+
+        if (originalImage == null || originalImage.img == null) {
+            System.out.println("❌ Error: No se ha podido leer la imagen original.");
+            return;
+        }
+
+        // Calcular total de píxeles para la fórmula de BPS
+        long totalPixels = (long) originalImage.width * originalImage.height * originalImage.bands;
+
+        System.out.println("\n========== GENERANDO DATOS (Q vs BPS vs PSNR) ==========");
+        System.out.println("Imagen: " + originalImage.name);
+        System.out.println("CSV Header: PSNR:bps bps:qStep");
+        // A. RECARGAR IMAGEN (Deep Copy)
+        Image workingImage = readImage();
+
+        // 3. Bucle de Q desde 1 hasta 128
+        // Puedes cambiar 'q+=1' a 'q+=5' para ir más rápido si solo quieres una vista previa
+        for (int q = 1; q <= 128; q++) {
+            try {
+
+
+                // --- ETAPA DE COMPRESIÓN (Simulación) ---
+
+                // 1. Cuantización
+                Quantitzation quant = Quantitzation.init(q);
+                quant.quanticiseDeadZone(workingImage);
+
+                // 2. Predicción DPCM
+                PredictorDPCM predictor = new PredictorDPCM();
+                predictor.aplicarPrediccioPixelAnterior(workingImage);
+
+                // 3. Codificación Aritmética (Para obtener el tamaño real en bits)
+                ArithmeticCoder coder = new ArithmeticCoder();
+                BitWriter bw = new BitWriter();
+                coder.encodeImage(workingImage, bw);
+
+                // --- CÁLCULO DEL RATE (BPS - Bits Per Sample) ---
+                // Le sumamos una estimación del header (aprox 50 bytes) para ser más realistas
+                long compressedBits = ((long) bw.getSize() * 8) + (50 * 8);
+                double bps = (double) compressedBits / totalPixels;
+
+                // --- ETAPA DE RECONSTRUCCIÓN ---
+
+                // 4. Despredicción
+                predictor.desferPrediccioPixelAnterior(workingImage);
+
+                // 5. Descuantización
+                quant.dequanticiseDeadZone(workingImage);
+
+                // --- CÁLCULO DE LA DISTORSIÓN (PSNR y MSE) ---
+                // MODIFICADO: Ahora llamamos a utils.DistorsionMetrics pasando las matrices int[][][]
+                double mse = DistorsionMetrics.calculateMSE(originalImage.img, workingImage.img);
+
+                // Para el PSNR pasamos el MSE calculado y la profundidad de bits original
+                double psnr = DistorsionMetrics.calculatePSNR(mse, originalImage.bitsPerSample);
+
+                // B. IMPRIMIR RESULTADO CSV
+                System.out.printf("%.4f;%.4f;%d%n", psnr, bps, q);
+
+            } catch (Exception e) {
+                System.err.println("Error procesando Q=" + q + ": " + e.getMessage());
+            }
+        }
+        System.out.println("======================================");
+    }
 }

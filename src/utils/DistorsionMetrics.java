@@ -4,7 +4,7 @@ public class DistorsionMetrics {
     private static double mse = 0.0;
 
 
-    public static double calculateMSE(short[][][] original, short[][][] compressed) {
+    public static double calculateMSE(int[][][] original, int[][][] compressed) {
         if (original == null || compressed == null || original.length == 0 || original[0].length == 0 || original[0][0].length == 0) {
             return 0.0;
         }
@@ -50,5 +50,14 @@ public class DistorsionMetrics {
 
         return maxAbsoluteError;
     }
+    public static double calculatePSNR(double mse, int bitsPerSample) {
+        if (mse == 0) return Double.POSITIVE_INFINITY;
+
+        // El valor màxim possible (255 per a 8 bits, 65535 per a 16 bits)
+        double maxPixelValue = Math.pow(2, bitsPerSample) - 1;
+
+        return 10 * Math.log10((maxPixelValue * maxPixelValue) / mse);
+    }
+
 
 }

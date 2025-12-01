@@ -52,6 +52,7 @@ public class ChooseOperation {
                 "CODIFICACIÓ Completa (Decorrelació -> Quantització -> Codificació Aritmética: .ac)",
                 "DESCODIFICACIÓ Completa (.ac -> R*.raw)",
                 "MÉTRICAS DE DISTORSIÓN (Original vs Descodificada)",
+                "Grafiques PSNR:BPS:QSTEP",
                 "s.- Go Back"
         };
 
@@ -190,6 +191,13 @@ public class ChooseOperation {
                 //processor.setOutputFolder(outputPath + "/imatges-decodificades");
 
                 //processor.compareOriginalWithDecoded();
+                break;
+            case 12:
+                System.out.println(TerminalUtils.GREEN + "\n[4] GRÀFIQUES PSNR:BPS:QSTEP" + TerminalUtils.RESET);
+                System.out.println("    -----------------------    ");
+                //spinner.start("Generant gràfiques...");
+                imageProcessor.generateCurvesData();
+                //spinner.stop();
                 break;
 
 

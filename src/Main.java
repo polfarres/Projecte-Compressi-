@@ -13,4 +13,7 @@ public class Main {
         }
 
     }
+
+
+    //resources/imatges/entrades/03508649.ube16_1_512_512.raw
 }
