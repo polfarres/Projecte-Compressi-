@@ -42,6 +42,18 @@ public class ImageProcessor {
         return image;
     } //✅
 
+    public Image readImageSequential() {
+        Image image = null;
+        try {
+            assert this.inputImage != null;
+            image = parseConfigFromFilename(this.inputImage);
+        } catch (Exception e) {
+            System.err.println("Error processant: " + this.inputImage + "no s'ha pogut llegir.");
+            e.printStackTrace();
+        }
+        return image;
+    }
+
     public void calculateImageEntropyTest() { //✅
 
         Image image = readImage();
@@ -193,22 +205,12 @@ public class ImageProcessor {
 
     } //✅
 
-
     public void generateCurvesData() {
-        // 1. Verificar que tenemos una imagen seleccionada
-        if (this.inputImage == null) {
-            System.out.println("❌ Error: No hay ninguna imagen seleccionada (inputImage es null).");
-            return;
-        }
 
-        // 2. Cargar la imagen ORIGINAL (Referencia para calidad perfecta)
+
+
         System.out.println("Cargando imagen original de referencia...");
         Image originalImage = readImage();
-
-        if (originalImage == null || originalImage.img == null) {
-            System.out.println("❌ Error: No se ha podido leer la imagen original.");
-            return;
-        }
 
         // Calcular total de píxeles para la fórmula de BPS
         long totalPixels = (long) originalImage.width * originalImage.height * originalImage.bands;
@@ -216,15 +218,15 @@ public class ImageProcessor {
         System.out.println("\n========== GENERANDO DATOS (Q vs BPS vs PSNR) ==========");
         System.out.println("Imagen: " + originalImage.name);
         System.out.println("CSV Header: PSNR:bps bps:qStep");
-        // A. RECARGAR IMAGEN (Deep Copy)
-        Image workingImage = readImage();
+
 
         // 3. Bucle de Q desde 1 hasta 128
         // Puedes cambiar 'q+=1' a 'q+=5' para ir más rápido si solo quieres una vista previa
-        for (int q = 1; q <= 128; q++) {
+        for (int q = 1; q <= 50; q++) {
             try {
 
-
+                // A. RECARGAR IMAGEN (Deep Copy)
+                Image workingImage = readImageSequential();
                 // --- ETAPA DE COMPRESIÓN (Simulación) ---
 
                 // 1. Cuantización
@@ -242,7 +244,8 @@ public class ImageProcessor {
 
                 // --- CÁLCULO DEL RATE (BPS - Bits Per Sample) ---
                 // Le sumamos una estimación del header (aprox 50 bytes) para ser más realistas
-                long compressedBits = ((long) bw.getSize() * 8) + (50 * 8);
+                long headerBits = calcularBitsHeader(workingImage.frequencies);
+                long compressedBits = ((long) bw.getSize() * 8) + headerBits;
                 double bps = (double) compressedBits / totalPixels;
 
                 // --- ETAPA DE RECONSTRUCCIÓN ---

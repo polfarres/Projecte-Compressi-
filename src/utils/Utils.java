@@ -107,4 +107,29 @@ public class Utils {
         }
         return fileName;
     }
+
+    public static long calcularBitsHeader(int[] frequencies) {
+
+        long bits = 0;
+
+        // Campos fijos
+        bits += 32; // width (int)
+        bits += 32; // height (int)
+        bits += 32; // bands (int)
+        bits += 32; // bitsPerSample (int)
+        bits += 8;  // signed (boolean)
+        bits += 8;  // bigEndian (boolean)
+
+        bits += 32; // qStep (int)
+
+        // Frecuencias
+        bits += 32; // frequencies.length (int)
+
+        if (frequencies != null) {
+            bits += frequencies.length * 32L; // cada freq es un int de 32 bits
+        }
+
+        return bits;
+    }
+
 }
