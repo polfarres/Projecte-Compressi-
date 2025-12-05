@@ -16,6 +16,7 @@ public class Quantitzation {
 
 
             // ----- Quantizice function -----
+        if (Q_STEP != 1){
         for (int b = 0; b < image.bands; b++) { // bands
             for (int x = 0; x < image.height; x++) { // width
                 for (int y = 0; y < image.width; y++) { // height
@@ -36,11 +37,12 @@ public class Quantitzation {
                 }
             }
         }
+        }
 
     } //✅
 
     public void dequanticiseDeadZone(Image image) {
-
+          if (Q_STEP != 1){
         for (int b = 0; b < image.bands; b++) {
             for (int x = 0; x < image.height; x++) {
                 for (int y = 0; y < image.width; y++) {
@@ -52,6 +54,7 @@ public class Quantitzation {
                 }
             }
         }
+    }
     }
 
 }
