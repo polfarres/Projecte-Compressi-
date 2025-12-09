@@ -112,7 +112,6 @@ Image Compression Project
 
 * [x] Read and write images
 * [x] Entropy calculation
-
     * [x] Entropy of order 0
     * [x] Entropies of order 1
 * [x] Quantization
@@ -124,7 +123,30 @@ Image Compression Project
 * [x] Coder and decoder done
 * [x] User interface improoved
 * [x] Code refactored
-* [ ] Distortion metrics (MSE and PAE)
+* [x] Distortion metrics (MSE and PAE)
+
+**Competition**
+-- --
+In this part of the project we are going to compare the different methods implemented in the previous sections. To acomplish a better results than our classmates.
+The improvements will be focused on the following points:
+
+**Pol Farres**
+
+- [ ] Dead Zone quantization augmented
+- [ ] Adaptative Quantization
+- [ ] Aritmetic Encoding Entropy 
+  - [ ] First degree
+  - [ ] Second degree
+
+**Mikel Garzón**
+
+- [ ] Lineal function DPCM
+- [ ] Median Edge Detector Predictor
+- [ ] JPEG-LS LOCO-I predictor
+- [ ] More pixels (corner pixels per example)
+- [ ] Adaptative Prediction
+
+-- --
 
 We are currently focusing on the first **three stages** of image compression:
 **Entropy**, **Quantization**, and **Prediction**.
