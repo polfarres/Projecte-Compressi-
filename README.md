@@ -140,7 +140,7 @@ The improvements will be focused on the following points:
 
 **Mikel Garzón**
 
-- [ ] Lineal function DPCM
+- [x] Lineal function DPCM
 - [ ] Median Edge Detector Predictor
 - [ ] JPEG-LS LOCO-I predictor
 - [ ] More pixels (corner pixels per example)

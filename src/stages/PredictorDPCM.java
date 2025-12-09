@@ -145,6 +145,57 @@ public class PredictorDPCM {
         }
     }
 
+    public void aplicarlinealFunctionDPCM(Image image) {
+
+        for (int b = 0; b < image.bands; b++) {
+            for (int x = 0; x < image.height; x++) {
+
+                int prev2Pixel = image.img[b][x][0];
+                int prevPixel = image.img[b][x][1];
+
+                for (int y = 2; y < image.width; y++) {
+
+                    int actual = image.img[b][x][y];
+
+                    int predicho = 2 * prevPixel - prev2Pixel;
+
+                    int error = actual - predicho;
+
+                    image.img[b][x][y] = error;
+
+                    // Actualización correcta
+                    prev2Pixel = prevPixel;
+                    prevPixel = actual;
+                }
+            }
+        }
+    }
+
+    public void desferLinealFunctionDPCM(Image image) {
+
+        for (int b = 0; b < image.bands; b++) {
+            for (int x = 0; x < image.height; x++) {
+
+                int reconstructed2 = image.img[b][x][0];
+                int reconstructed = image.img[b][x][1];
+
+                for (int y = 2; y < image.width; y++) {
+
+                    int error = image.img[b][x][y];
+
+                    // Reconstrucción correcta:
+                    int pixelReal = 2 * reconstructed - reconstructed2 + error;
+
+                    image.img[b][x][y] = pixelReal;
+
+                    // Actualización correcta
+                    reconstructed2 = reconstructed;
+                    reconstructed = pixelReal;
+                }
+            }
+        }
+    }
+
 
 
 }

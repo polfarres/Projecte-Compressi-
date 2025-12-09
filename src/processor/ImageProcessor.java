@@ -11,6 +11,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 import static io.InputImageReader.readAC;
@@ -235,7 +236,7 @@ public class ImageProcessor {
 
                 // 2. Predicción DPCM
                 PredictorDPCM predictor = new PredictorDPCM();
-                predictor.aplicarPrediccioPixelAnterior(workingImage);
+                predictor.aplicarlinealFunctionDPCM(workingImage);
 
                 // 3. Codificación Aritmética (Para obtener el tamaño real en bits)
                 ArithmeticCoder coder = new ArithmeticCoder();
@@ -251,7 +252,7 @@ public class ImageProcessor {
                 // --- ETAPA DE RECONSTRUCCIÓN ---
 
                 // 4. Despredicción
-                predictor.desferPrediccioPixelAnterior(workingImage);
+                predictor.desferLinealFunctionDPCM(workingImage);
 
                 // 5. Descuantización
                 quant.dequanticiseDeadZone(workingImage);
@@ -264,12 +265,12 @@ public class ImageProcessor {
                 double psnr = DistorsionMetrics.calculatePSNR(mse, originalImage.bitsPerSample);
 
                 // B. IMPRIMIR RESULTADO CSV
-                System.out.printf("%.4f;%.4f;%d%n", psnr, bps, q);
+                System.out.printf(Locale.GERMANY,"%d;%.4f;%.4f%n", q, bps, psnr);
 
             } catch (Exception e) {
-                System.err.println("Error procesando Q=" + q + ": " + e.getMessage());
+                System.err.println(" Error procesando Q=" + q + ": " + e.getMessage());
             }
         }
-        System.out.println("======================================");
+        System.out.println("%n======================================");
     }
 }

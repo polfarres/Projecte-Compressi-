@@ -97,20 +97,21 @@ public class ChooseOperation {
 
         Scanner Q_Scanner; // Scanner temporal per valors Q
 
-        setInputImage();
-
         switch (option) {
             case 1:
+                setInputImage();
                 System.out.println(TerminalUtils.CYAN + "Lectura io de la imagen en raw." + TerminalUtils.RESET);
                 System.out.println("    -----------------------    ");
                 Image img = imageProcessor.readImage();
                 break;
             case 2:
+                setInputImage();
                 System.out.println(TerminalUtils.YELLOW + "Entropía total de la imatge: " + TerminalUtils.RESET);
                 System.out.println("    -----------------------    ");
                 imageProcessor.calculateImageEntropyTest();
                 break;
             case 3:
+                setInputImage();
                 System.out.println(TerminalUtils.YELLOW + "Entropía condicionada grau (correlació de pixels) " + TerminalUtils.RESET);
                 System.out.println("    -----------------------    ");
                 spinner.start("Processant...");
@@ -118,6 +119,7 @@ public class ChooseOperation {
                 spinner.stop();
                 break;
             case 4:
+                setInputImage();
                 System.out.println(TerminalUtils.YELLOW + "Entropía condicionada (correlació de 4 píxels propers) " + TerminalUtils.RESET);
                 System.out.println("    -----------------------    ");
                 spinner.start("Processant...");
@@ -125,6 +127,7 @@ public class ChooseOperation {
                 spinner.stop();
                 break;
             case 5:
+                setInputImage();
                 System.out.println(TerminalUtils.GREEN + "Quantització de imatges" + TerminalUtils.RESET);
                 System.out.println("    -----------------------    ");
                 System.out.print("    Quin es el valor de Q per el qual vols quantitzar?:  ");
@@ -139,6 +142,7 @@ public class ChooseOperation {
                 break;
 
             case 6:
+                setInputImage();
                 System.out.println(TerminalUtils.GREEN + "DeQuantització de imatges" + TerminalUtils.RESET);
                 System.out.println("    -----------------------    ");
 
@@ -148,6 +152,7 @@ public class ChooseOperation {
                 break;
 
             case 7:
+                setInputImage();
                 System.out.println(TerminalUtils.BLUE + "PREDICCIÓ D'IMATGES " + TerminalUtils.RESET);
                 System.out.println("    -----------------------    ");
 
@@ -157,6 +162,7 @@ public class ChooseOperation {
                 break;
 
             case 8:
+                setInputImage();
                 System.out.println(TerminalUtils.BLUE + "DESPREDICCIÓ (RECONSTRUCCIÓ) D'IMATGES" + TerminalUtils.RESET);
                 System.out.println("    -----------------------    ");
 
@@ -166,6 +172,7 @@ public class ChooseOperation {
                 break;
 
             case 9:
+                setInputImage();
                 System.out.println(TerminalUtils.MAGENTA + "CODIFICACIÓ COMPLETA (Entropy Coding)" + TerminalUtils.RESET);
                 System.out.println("    -----------------------    ");
 
@@ -175,6 +182,7 @@ public class ChooseOperation {
                 break;
 
             case 10:
+                setInputImage();
                 System.out.println(TerminalUtils.MAGENTA + "DESCODIFICACIÓ COMPLETA (.ac -> RAW)" + TerminalUtils.RESET);
                 System.out.println("    -----------------------    ");
 
@@ -193,6 +201,7 @@ public class ChooseOperation {
                 //processor.compareOriginalWithDecoded();
                 break;
             case 12:
+                setInputDefault();
                 System.out.println(TerminalUtils.GREEN + "\n[4] GRÀFIQUES PSNR:BPS:QSTEP" + TerminalUtils.RESET);
                 System.out.println("    -----------------------    ");
                 //spinner.start("Generant gràfiques...");
@@ -212,6 +221,11 @@ public class ChooseOperation {
         System.out.println("Introdueix el path de la imatge d'entrada (raw o ac): ");
         String path = input.nextLine();
         imageProcessor.uploadImage(path);
+    }
+
+    public void setInputDefault (){
+        String defaultPath = "resources/imatges/n1_GRAY.ube8_1_2560_2048.raw";
+        imageProcessor.uploadImage(defaultPath);
     }
 
     public boolean isFinished() {
