@@ -15,5 +15,5 @@ public class Main {
     }
 
 
-    //resources/imatges/entrades/03508649.ube16_1_512_512.raw
+    //resources/imatges/n1_GRAY.ube8_1_2560_2048.raw
 }

@@ -205,7 +205,7 @@ public class ChooseOperation {
                 System.out.println(TerminalUtils.GREEN + "\n[4] GRÀFIQUES PSNR:BPS:QSTEP" + TerminalUtils.RESET);
                 System.out.println("    -----------------------    ");
                 //spinner.start("Generant gràfiques...");
-                imageProcessor.generateCurvesData();
+                imageProcessor.generateCurvesDataImproved();
                 //spinner.stop();
                 break;
 

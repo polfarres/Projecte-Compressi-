@@ -207,4 +207,84 @@ public class ArithmeticCoder {
         return symbols;
     } //✅
 
+
+    public void encodeImageImproved(Image image, BitWriter bw) {
+        java.util.List<Integer> symbols = getIntegers(image);
+        java.util.List<Integer> cumFreq = ArithmeticCoder.computeCumFreq(symbols);
+
+        for (int symbol : symbols) {
+            encodeSymbol(symbol, cumFreq, bw);
+        }
+        finish(bw);
+    }
+
+    public void encodeSymbolImproved(int symbol, stages.AdaptiveFrequencyModel model, BitWriter bw) {
+        long range = (long) (high & 0xFFFFFFFFL) - (low & 0xFFFFFFFFL) + 1;
+        long totalFreq = model.getTotal();
+
+        long cumSymbol = model.getLow(symbol);
+        long cumSymbolPlus1 = model.getHigh(symbol);
+
+        // Actualització de l'interval
+        high = (int) ((low & 0xFFFFFFFFL) + (range * cumSymbolPlus1) / totalFreq - 1);
+        low = (int) ((low & 0xFFFFFFFFL) + (range * cumSymbol) / totalFreq);
+
+        // ... El bucle de renormalització (writeBit) és EXACTAMENT IGUAL al teu ...
+        while (true) {
+            // (Copia el teu codi de renormalització aquí: el de low/high i writeBit)
+            if (((high & 0x80000000) == (low & 0x80000000))) {
+                int bit = (high >>> 31) & 1;
+                bw.writeBit(bit);
+                while (underflow > 0) {
+                    bw.writeBit(bit ^ 1);
+                    underflow--;
+                }
+                low <<= 1; high <<= 1; high |= 1;
+            } else if (((low & 0x40000000) != 0) && ((high & 0x40000000) == 0)) {
+                underflow++;
+                low &= 0x3FFFFFFF;
+                high |= 0x40000000;
+                low <<= 1; high <<= 1; high |= 1;
+            } else {
+                break;
+            }
+        }
+    }
+
+    // --- DECODER ---
+    public int decodeSymbolImproved(stages.AdaptiveFrequencyModel model, BitReader br) {
+        long range = (long) (high & 0xFFFFFFFFL) - (low & 0xFFFFFFFFL) + 1;
+        long totalFreq = model.getTotal();
+
+        long value = (((code & 0xFFFFFFFFL) - (low & 0xFFFFFFFFL) + 1) * totalFreq - 1) / range;
+
+        // Preguntem al model quin símbol és
+        int symbol = model.getSymbol(value);
+
+        long cumSymbol = model.getLow(symbol);
+        long cumSymbolPlus1 = model.getHigh(symbol);
+
+        high = (int) ((low & 0xFFFFFFFFL) + (range * cumSymbolPlus1) / totalFreq - 1);
+        low = (int) ((low & 0xFFFFFFFFL) + (range * cumSymbol) / totalFreq);
+
+        // ... Bucle de renormalització (readBit) IGUAL al teu ...
+        while (true) {
+            // (Copia el teu codi de renormalització del decoder aquí)
+            if (((high & 0x80000000) == (low & 0x80000000))) {
+                low <<= 1; high <<= 1; high |= 1;
+                int b = br.readBit();
+                code = ((code << 1) | (b & 1));
+            } else if (((low & 0x40000000) != 0) && ((high & 0x40000000) == 0)) {
+                low &= 0x3FFFFFFF;
+                high |= 0x40000000;
+                low <<= 1; high <<= 1; high |= 1;
+                int b = br.readBit();
+                code = ((code ^ 0x40000000) << 1) | (b & 1);
+            } else {
+                break;
+            }
+        }
+        return symbol;
+    }
+
 }
