@@ -141,15 +141,17 @@ The improvements will be focused on the following points:
 **Mikel Garzón**
 
 - [x] Lineal function DPCM
-- [ ] Median Edge Detector Predictor
-- [ ] JPEG-LS LOCO-I predictor
-- [ ] More pixels (corner pixels per example)
-- [ ] Adaptative Prediction
+- [x] Median Edge Detector Predictor
+- [X] LOCO-I predictor
+- [x] GAP predictor
+  - [x] Improved MED (original)
+- [x] Smoothing Kernel implemented
+- [ ] Adaptative Prediction --> knn
 
 -- --
 
 We are currently focusing on the first **three stages** of image compression:
-**Entropy**, **Quantization**, and **Prediction**.
+**Entropy Encoding**, **Quantization**, and **Prediction**.
 
 See the [open issues](https://github.com/polfarres/Projecte-Compressi-/issues) for a full list of proposed features (and known issues).
 

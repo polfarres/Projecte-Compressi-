@@ -8,6 +8,7 @@ public class Quantitzation {
 
         public static Quantitzation init(int qStep) {
             if (qStep <= 0) throw new IllegalArgumentException("qStep must be > 0");
+
             Q_STEP = qStep;
             return new Quantitzation();
         }

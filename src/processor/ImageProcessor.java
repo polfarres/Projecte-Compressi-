@@ -3,6 +3,7 @@ import image.Image;
 import stages.ArithmeticCoder;
 import stages.PredictorDPCM;
 import stages.Quantitzation;
+import stages.SmoothingKernel;
 import utils.*;
 
 import java.io.BufferedInputStream;
@@ -11,6 +12,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 import static io.InputImageReader.readAC;
@@ -126,7 +128,7 @@ public class ImageProcessor {
         PredictorDPCM predictor = new PredictorDPCM();
 
         // 1. Aplicar la predicció: el resultat és la matriu de RESIDUS
-        predictor.aplicarPrediccioPixelAnterior(image);
+        predictor.aplicarIMED(image);
         image.name = "predicted_" + image.name;
         double H = Entropy.imageEntropy(image);
         System.out.printf("Imagen: %s -> Entropía total H(X): %.4f bits%n", image.name, H);
@@ -144,6 +146,20 @@ public class ImageProcessor {
         image.name = "depredicted_" + image.name;
         double H = Entropy.imageEntropy(image);
         System.out.printf("Imagen: %s -> Entropía total H(X): %.4f bits%n", image.name, H);
+
+    } //✅
+
+    public void smoothingKernelTest() {
+
+        Image image = readImage();
+        SmoothingKernel smoothingKernel = new SmoothingKernel();
+
+        smoothingKernel.MedianFilter(image);
+
+        double H = Entropy.imageEntropy(image);
+        System.out.printf("Imagen: %s -> Entropía total H(X): %.4f bits%n", image.name, H);
+        image.name = "smoothed_" + image.name;
+        writeResult(image);
 
     } //✅
 
@@ -208,7 +224,6 @@ public class ImageProcessor {
     public void generateCurvesData() {
 
 
-
         System.out.println("Cargando imagen original de referencia...");
         Image originalImage = readImage();
 
@@ -229,13 +244,18 @@ public class ImageProcessor {
                 Image workingImage = readImageSequential();
                 // --- ETAPA DE COMPRESIÓN (Simulación) ---
 
+                // 0. Smoothing Kernel 8x8
+                SmoothingKernel smoothingKernel = new SmoothingKernel();
+                smoothingKernel.MedianFilter(workingImage);
+
+
                 // 1. Cuantización
                 Quantitzation quant = Quantitzation.init(q);
                 quant.quanticiseDeadZone(workingImage);
 
                 // 2. Predicción DPCM
                 PredictorDPCM predictor = new PredictorDPCM();
-                predictor.aplicarPrediccioPixelAnterior(workingImage);
+                predictor.aplicarIMED(workingImage);
 
                 // 3. Codificación Aritmética (Para obtener el tamaño real en bits)
                 ArithmeticCoder coder = new ArithmeticCoder();
@@ -243,7 +263,7 @@ public class ImageProcessor {
                 coder.encodeImage(workingImage, bw);
 
                 // --- CÁLCULO DEL RATE (BPS - Bits Per Sample) ---
-                // Le sumamos una estimación del header (aprox 50 bytes) para ser más realistas
+
                 long headerBits = calcularBitsHeader(workingImage.frequencies);
                 long compressedBits = ((long) bw.getSize() * 8) + headerBits;
                 double bps = (double) compressedBits / totalPixels;
@@ -251,7 +271,7 @@ public class ImageProcessor {
                 // --- ETAPA DE RECONSTRUCCIÓN ---
 
                 // 4. Despredicción
-                predictor.desferPrediccioPixelAnterior(workingImage);
+                predictor.desferIMED(workingImage);
 
                 // 5. Descuantización
                 quant.dequanticiseDeadZone(workingImage);
@@ -264,86 +284,12 @@ public class ImageProcessor {
                 double psnr = DistorsionMetrics.calculatePSNR(mse, originalImage.bitsPerSample);
 
                 // B. IMPRIMIR RESULTADO CSV
-                System.out.printf("%.4f;%.4f;%d%n", psnr, bps, q);
+                System.out.printf(Locale.GERMANY,"%d;%.4f;%.4f%n", q, bps, psnr);
 
             } catch (Exception e) {
-                System.err.println("Error procesando Q=" + q + ": " + e.getMessage());
+                System.err.println(" Error procesando Q=" + q + ": " + e.getMessage());
             }
         }
-        System.out.println("======================================");
+        System.out.println("%n======================================");
     }
-
-    public void generateCurvesDataImproved() {
-
-        System.out.println("Cargando imagen original de referencia...");
-        Image originalImage = readImage(); // Assegura't que tens aquest mètode accessible
-
-        // Calcular total de píxeles per a la fórmula de BPS
-        long totalPixels = (long) originalImage.width * originalImage.height * originalImage.bands;
-
-        // Header fix (en bits):
-        // Width(32) + Height(32) + Bands(32) + Bits(32) + Signed(8) + Endian(8) + QStep(32) = 176 bits.
-        // Això són només 22 bytes. MOLT IMPORTANT: Ja no sumem la taula de freqüències!
-        long STATIC_HEADER_BITS = 176;
-
-        System.out.println("\n========== GENERANDO DATOS (Q vs BPS vs PSNR) [MODE ADAPTATIU] ==========");
-        System.out.println("Imagen: " + originalImage.name);
-        System.out.println("CSV Header: Q_Step;BPS;PSNR");
-
-        // Bucle de QStep
-        // Arribem fins a 100 o més perquè amb DeadZone es pot comprimir molt més sense trencar-ho tot.
-        for (int q = 1; q <= 60; q++) {
-            try {
-                // A. RECARGAR IMAGEN (Deep Copy per no destrossar l'original)
-                Image workingImage = readImageSequential();
-
-                // --- ETAPA DE COMPRESIÓN ---
-
-                // 1. Cuantización Dead Zone Millorada (La que hem fet abans)
-                // Assegura't que Quantitzation té accés al Q actual
-                Quantitzation quant = Quantitzation.init(q);
-                quant.quanticiseDeadZoneImproved(workingImage);
-
-                // 2. Predicción DPCM (Això genera molts zeros propers)
-                PredictorDPCM predictor = new PredictorDPCM();
-                predictor.aplicarPrediccioPixelAnterior(workingImage);
-
-                // 3. Codificación Aritmética ADAPTATIVA
-                // Important: encodeImage ara ha de fer servir AdaptiveFrequencyModel internament
-                ArithmeticCoder coder = new ArithmeticCoder();
-                BitWriter bw = new BitWriter();
-
-                // Ja no calculem freqüències abans! El model s'adapta al vol.
-                coder.encodeImage(workingImage, bw);
-
-                // --- CÁLCULO DEL RATE (BPS) ---
-                long compressedPayloadBits = (long) bw.getSize() * 8;
-                long totalBits = compressedPayloadBits + STATIC_HEADER_BITS;
-
-                double bps = (double) totalBits / totalPixels;
-
-                // --- ETAPA DE RECONSTRUCCIÓN ---
-
-                // 4. Despredicción
-                predictor.desferPrediccioPixelAnterior(workingImage);
-
-                // 5. Descuantización (Amb el centratge +Offset per guanyar PSNR)
-                quant.dequanticiseDeadZoneImproved(workingImage);
-
-                // --- CÁLCULO DE LA DISTORSIÓN (PSNR) ---
-                double mse = DistorsionMetrics.calculateMSE(originalImage.img, workingImage.img);
-                double psnr = DistorsionMetrics.calculatePSNR(mse, originalImage.bitsPerSample);
-
-                // B. IMPRIMIR RESULTADO CSV (Utilitza punt o coma segons el teu Excel)
-                // Format: QStep ; BPS ; PSNR
-                System.out.printf("%d;%.4f;%.4f%n", q, bps, psnr);
-
-            } catch (Exception e) {
-                System.err.println("Error procesando Q=" + q + ": " + e.getMessage());
-                e.printStackTrace();
-            }
-        }
-        System.out.println("======================================");
-    }
-
 }

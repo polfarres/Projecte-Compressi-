@@ -34,6 +34,10 @@ public class Utils {
     } //✅
 
     public static void writeResult(Image image) { //✅
+
+
+        image.name = "sortida_" + image.name;
+
         try {
             OutputImageWriter.writeRaw(image);
 

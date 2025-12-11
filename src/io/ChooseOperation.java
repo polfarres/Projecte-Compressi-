@@ -45,13 +45,13 @@ public class ChooseOperation {
                 "DeQuantització d'imatges",
                 "Predicció DPCM (Calcula residus: Q*.raw -> P*.raw)",
                 "Despredicció (Reconstrueix: P*.raw -> R*.raw)",
+                "Smoothing Kernel (Filtre de mediana 8x8)",
                 "Press 's'.- Go Back"
         };
 
         String[] prodOptions = new String[]{
                 "CODIFICACIÓ Completa (Decorrelació -> Quantització -> Codificació Aritmética: .ac)",
                 "DESCODIFICACIÓ Completa (.ac -> R*.raw)",
-                "MÉTRICAS DE DISTORSIÓN (Original vs Descodificada)",
                 "Grafiques PSNR:BPS:QSTEP",
                 "s.- Go Back"
         };
@@ -67,7 +67,7 @@ public class ChooseOperation {
             this.inputOption = Integer.toString(sel + 1);
             if(currentMode == Mode.PRODUCTION){
                 // Adjust for production mode offset
-                this.inputOption = Integer.toString(sel + 9); // Opcions 9, 10, 11 en mode producció
+                this.inputOption = Integer.toString(sel + 10); // Opcions 9, 10, 11 en mode producció
             }
         } else {
             this.inputOption = "s"; // Exit chosen or fallback
@@ -173,7 +173,17 @@ public class ChooseOperation {
 
             case 9:
                 setInputImage();
+                System.out.println(TerminalUtils.BLUE + "SMOOTHING KERNEL" + TerminalUtils.RESET);
+                System.out.println("    -----------------------    ");
+
+                imageProcessor.smoothingKernelTest();
+                spinner.stop();
+                break;
+
+            case 10:
+                setInputImage();
                 System.out.println(TerminalUtils.MAGENTA + "CODIFICACIÓ COMPLETA (Entropy Coding)" + TerminalUtils.RESET);
+                System.out.println(TerminalUtils.MAGENTA + "" + TerminalUtils.RESET);
                 System.out.println("    -----------------------    ");
 
                 spinner.start("Codificant imatge (arithmetic encoding)...");
@@ -181,31 +191,21 @@ public class ChooseOperation {
                 spinner.stop();
                 break;
 
-            case 10:
+            case 11:
+                System.out.println(TerminalUtils.GREEN + "\n DESCODIFICACIÓ COMPLETA (.ac -> RAW)" + TerminalUtils.RESET);
                 setInputImage();
-                System.out.println(TerminalUtils.MAGENTA + "DESCODIFICACIÓ COMPLETA (.ac -> RAW)" + TerminalUtils.RESET);
                 System.out.println("    -----------------------    ");
 
                 spinner.start("Descodificant imatges...");
                 imageProcessor.decoder();
                 spinner.stop();
                 break;
-
-            case 11:
-                System.out.println(TerminalUtils.GREEN + "\n[11] CÁLCULO DE MÉTRICAS (MSE/PAE)." + TerminalUtils.RESET);
-
-                // Input (implícit): Imatges originals en memòria.
-                // OutputFolder configurat per buscar les descodificades (Sortida del pas 10)
-                //processor.setOutputFolder(outputPath + "/imatges-decodificades");
-
-                //processor.compareOriginalWithDecoded();
-                break;
             case 12:
                 setInputDefault();
                 System.out.println(TerminalUtils.GREEN + "\n[4] GRÀFIQUES PSNR:BPS:QSTEP" + TerminalUtils.RESET);
                 System.out.println("    -----------------------    ");
                 //spinner.start("Generant gràfiques...");
-                imageProcessor.generateCurvesDataImproved();
+                imageProcessor.generateCurvesData();
                 //spinner.stop();
                 break;
 
@@ -224,7 +224,7 @@ public class ChooseOperation {
     }
 
     public void setInputDefault (){
-        String defaultPath = "resources/imatges/n1_GRAY.ube8_1_2560_2048.raw";
+        String defaultPath = "resources/images/n1_GRAY.ube8_1_2560_2048.raw";
         imageProcessor.uploadImage(defaultPath);
     }
 

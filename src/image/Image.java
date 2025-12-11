@@ -62,6 +62,13 @@ public class Image {
         this.imagePath = (inputImage != null) ? new File(inputImage).getPath() : null;
     }
 
+    public Image(int width, int height, int bands) {
+        this.width = width;
+        this.height = height;
+        this.bands = bands;
+        img = new int[bands][height][width];
+    }
+
     public void printInfo() {
         System.out.println("Image Info:");
         System.out.println("Width: " + width);
